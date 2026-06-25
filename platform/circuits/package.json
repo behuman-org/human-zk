@@ -1,0 +1,17 @@
+{
+  "name": "@behuman/platform-circuits",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Circuito ZK (Circom) de la CAPA 2 — post/identidad anónima de plataforma",
+  "scripts": {
+    "compile": "bash scripts/compile.sh",
+    "setup": "bash scripts/setup.sh",
+    "prove": "bash scripts/prove.sh"
+  },
+  "dependencies": {
+    "circomlib": "^2.0.5"
+  },
+  "devDependencies": {
+    "snarkjs": "^0.7.4"
+  }
+}

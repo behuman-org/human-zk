@@ -12,3 +12,8 @@ soroban-sdk = { workspace = true }
 
 [dev-dependencies]
 soroban-sdk = { workspace = true, features = ["testutils"] }
+# Parseo de puntos BLS12-381 desde coordenadas decimales de snarkjs (solo en tests).
+ark-bls12-381 = "0.4.0"
+ark-serialize = "0.4.2"
+ark-ff = "0.4.2"
+ark-ec = "0.4.2"

@@ -62,3 +62,7 @@ Thumbs.db
 
 # --- artefactos del circuito servidos al frontend (se copian con copy-circuit.sh) ---
 /web/public/circuits/
+
+# --- Plataforma CAPA 2 (store local, no PII) ---
+platform/api/.platform-store.json
+/web/public/circuits-platform/

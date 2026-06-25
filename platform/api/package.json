@@ -2,19 +2,23 @@
   "name": "@behuman/api",
   "version": "0.0.0",
   "private": true,
-  "description": "Backend de la plataforma de opinión — feed, posts, almacenamiento de contenido",
+  "description": "Backend de la plataforma de opinión — perfil (username) + contenido off-chain, keyed por platformId",
   "type": "module",
   "main": "src/index.ts",
   "scripts": {
-    "dev": "tsx watch src/index.ts",
+    "dev": "tsx watch src/server.ts",
+    "serve": "tsx src/server.ts",
     "build": "tsc -p tsconfig.json",
     "test": "echo \"(sin tests aún)\" && exit 0"
   },
   "dependencies": {
-    "@behuman/sdk": "*",
-    "@behuman/shared": "*"
+    "@behuman/shared": "*",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2"
   },
   "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.11.0",
     "tsx": "^4.7.0",
     "typescript": "^5.4.0"
   }

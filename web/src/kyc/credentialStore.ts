@@ -29,3 +29,18 @@ export function loadCredential(docId: string): StoredCredential | null {
     return null;
   }
 }
+
+/** Devuelve cualquier credencial guardada en este device (la Capa 2 no conoce el docId). */
+export function loadAnyCredential(): StoredCredential | null {
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith("behuman.cred.")) {
+        return JSON.parse(localStorage.getItem(k)!) as StoredCredential;
+      }
+    }
+  } catch {
+    /* ignore */
+  }
+  return null;
+}
