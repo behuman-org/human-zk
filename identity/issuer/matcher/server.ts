@@ -14,6 +14,7 @@ import express from "express";
 import multer from "multer";
 import type { EnrollmentResult, MatchResult } from "@behuman/shared";
 import { getProvider } from "./provider.js";
+import { validateDocument } from "./documentCheck.js";
 import { enrollVerifiedHuman } from "../src/index.js";
 
 // Cargar .env desde la raíz del repo (matcher/ está en identity/issuer/matcher).
@@ -44,6 +45,23 @@ app.get("/health", (_req, res) => {
 
 type MulterFiles = Record<string, Express.Multer.File[]>;
 
+// Valida que la imagen subida sea un documento de identidad (DNI), no una foto cualquiera.
+// El frontend habilita el escaneo de cara solo si esto da ok.
+app.post("/document", upload.single("document"), async (req, res) => {
+  const document = req.file?.buffer;
+  if (!document) return res.status(400).json({ error: "missing_document" });
+  try {
+    const check = await validateDocument(document);
+    console.log(
+      `[document] ok=${check.ok} keywords=${check.keywordsFound} tokens=${check.tokens} docNumber=${check.hasDocNumber} reasons=${check.reasons.join(",")}`,
+    );
+    res.json({ ok: check.ok, reasons: check.reasons });
+  } catch (err) {
+    console.error("[document] error:", (err as Error).message);
+    res.status(500).json({ error: "document_check_failed" });
+  }
+});
+
 app.post(
   "/verify",
   upload.fields([
@@ -59,6 +77,19 @@ app.post(
     if (selfieFrames.length === 0) return res.status(400).json({ error: "missing_selfie" });
 
     try {
+      // Gate de documento: debe ser una identificación, no una foto cualquiera.
+      const docCheck = await validateDocument(document);
+      if (!docCheck.ok) {
+        const rejected: MatchResult = {
+          ok: false,
+          matchScore: 0,
+          matchDistance: 1,
+          livenessOk: false,
+          reasons: docCheck.reasons,
+        };
+        console.log(`[verify] documento inválido reasons=${docCheck.reasons.join(",")}`);
+        return res.json(rejected);
+      }
       const result: MatchResult = await getProvider().verifyIdentity({ document, selfieFrames });
       // Log PII-free: solo metadatos del resultado.
       console.log(
@@ -91,6 +122,11 @@ app.post(
     if (!docId) return res.status(400).json({ error: "missing_docId" });
 
     try {
+      const docCheck = await validateDocument(document);
+      if (!docCheck.ok) {
+        console.log(`[enroll] documento inválido reasons=${docCheck.reasons.join(",")}`);
+        return res.json({ ok: false, reasons: docCheck.reasons } satisfies EnrollmentResult);
+      }
       const result: EnrollmentResult = await enrollVerifiedHuman({
         document,
         selfieFrames,
