@@ -18,6 +18,7 @@ import { enroll } from "./api";
 import { computeCommitment, generateProof, randomSecret, type GeneratedProof } from "./zk";
 import { initIfNeeded, isVerified, verifyAndRegister, ContractError } from "./chain";
 import { CONTRACT_ID } from "./stellar";
+import { loadCredential, saveCredential, type StoredCredential } from "./credentialStore";
 
 type Step = "connect" | "consent" | "document" | "attributes" | "scan" | "processing" | "done" | "error";
 
@@ -60,22 +61,48 @@ export function KycFlow() {
     if (!doc || !attrs || !address) return fail("Faltan datos del flujo.");
     setStep("processing");
     try {
-      setMsg("Generando tu secreto e identidad (en el dispositivo)…");
-      const secret = randomSecret();
-      const commitment = await computeCommitment(attrs, secret);
+      // Reanudar desde una credencial guardada (evita re-enrolar y el de-dup).
+      let cred: StoredCredential | null = loadCredential(attrs.docId);
+      if (cred) {
+        setMsg("Recuperando tu credencial guardada en este dispositivo…");
+      } else {
+        setMsg("Generando tu secreto e identidad (en el dispositivo)…");
+        const secret = randomSecret();
+        const commitment = await computeCommitment(attrs, secret);
 
-      setMsg("Validando documento + cara y registrando en el issuer…");
-      const en = await enroll(doc, frames, commitment, attrs.docId);
-      if (!en.ok) {
-        return fail(en.reasons.map((r) => REASON[r] ?? r).join(" "));
+        setMsg("Validando documento + cara y registrando en el issuer…");
+        const en = await enroll(doc, frames, commitment, attrs.docId);
+        if (!en.ok) {
+          if (en.reasons.includes("already_enrolled")) {
+            return fail(
+              "Este documento ya fue validado en otra sesión/dispositivo y no tenemos tu credencial acá. " +
+                "Usá “Ver mi estado” con tu wallet; si necesitás re-validar, pedí un reset del issuer.",
+            );
+          }
+          return fail(en.reasons.map((r) => REASON[r] ?? r).join(" "));
+        }
+        cred = {
+          attributes: attrs,
+          secret,
+          issuerRoot: en.issuerRoot!,
+          pathElements: en.pathElements!,
+          pathIndices: en.pathIndices!,
+        };
+        saveCredential(attrs.docId, cred); // resumible si falla el on-chain
       }
 
       setMsg("Generando la prueba ZK en tu dispositivo (la PII no sale)…");
-      const gen = await generateProof(attrs, secret, en.pathElements!, en.pathIndices!, address);
+      const gen = await generateProof(
+        cred.attributes,
+        cred.secret,
+        cred.pathElements,
+        cred.pathIndices,
+        address,
+      );
       setLastProof(gen);
 
       setMsg("Inicializando el registro on-chain si hace falta (firmá en la wallet)…");
-      await initIfNeeded(address, en.issuerRoot!);
+      await initIfNeeded(address, cred.issuerRoot);
 
       setMsg("Registrando en Stellar — firmá en tu wallet…");
       let hash: string;
