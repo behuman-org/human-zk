@@ -12,6 +12,7 @@
     "test": "echo \"(sin tests aún)\" && exit 0"
   },
   "dependencies": {
+    "@behuman/curation": "*",
     "@behuman/shared": "*",
     "dotenv": "^16.4.5",
     "express": "^4.19.2"

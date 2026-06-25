@@ -157,7 +157,15 @@ export function Platform({ onBack }: { onBack: () => void }) {
       {feed.map((f, i) => (
         <div key={i} style={{ borderTop: "1px solid #eee", padding: "8px 0" }}>
           <strong>{f.username || "anónimo"}</strong>{" "}
-          <span style={{ opacity: 0.6 }}>@{f.handle}</span>
+          <span style={{ opacity: 0.6 }}>@{f.handle}</span>{" "}
+          {f.curation?.status === "flagged" && (
+            <span title={f.curation.reason} style={{ fontSize: "0.75em", color: "#b06000" }}>
+              ⚠️ etiquetado
+            </span>
+          )}
+          {f.curation?.status === "approved" && (
+            <span style={{ fontSize: "0.75em", color: "#137333" }}>✓ curado</span>
+          )}
           <p style={{ margin: "4px 0" }}>{f.content}</p>
           {f.txHash && (
             <a href={txUrl(f.txHash)} target="_blank" rel="noreferrer" style={{ fontSize: "0.8em" }}>

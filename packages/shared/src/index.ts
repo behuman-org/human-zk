@@ -101,3 +101,13 @@ export interface CurationVerdict {
   status: CurationStatus;
   reason?: string;
 }
+
+/**
+ * Entrada del curador. SOLO contenido + seudónimo (platformId / handle anónimo).
+ * NUNCA address del KYC ni PII — la moderación no puede deanonimizar.
+ */
+export interface CurationInput {
+  platformId: string; // seudónimo anónimo (no es PII ni address)
+  handle: string; // últimos 5 del platformId
+  content: string; // texto del post a revisar
+}

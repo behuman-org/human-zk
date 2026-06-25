@@ -66,3 +66,6 @@ Thumbs.db
 # --- Plataforma CAPA 2 (store local, no PII) ---
 platform/api/.platform-store.json
 /web/public/circuits-platform/
+
+# --- Curaduria CAPA 2 (cola de moderacion local, no PII) ---
+**/.moderation-queue*.json
