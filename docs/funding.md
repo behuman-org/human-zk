@@ -100,3 +100,37 @@ Variables (`.env`, ver `.env.example`): `ASSET`, `FUNDING_PROVIDER`, `FUNDING_AP
   opiniones requiere `ANTHROPIC_API_KEY` (sin ella, las opiniones se escalan a revisión).
 
 > ⚠️ El issuer de Capa 1 es un **mock** (no KYC real). Esta capa es exploratoria.
+
+## Despliegue en testnet
+
+Primer despliegue del contrato no-custodial en **Stellar testnet** (verificado on-chain:
+`init` OK y views `state=Fundraising`, `goal=100`, `raised=0`).
+
+| Recurso | Valor |
+|---|---|
+| Red | testnet |
+| `campaign_controller` (instancia demo) | `CB5NYUPBHDNTSN7MVJOALELTIY4BXGPTGUR6JPA7SQSZRTA46G6GIOAM` |
+| WASM hash | `fd63633855313e87a685fe80686fd9eeaf4d359f39eff84cd81ffd3fa725aa78` |
+| Activo (XLM SAC testnet) | `CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC` |
+| Deployer/admin | `behuman-deployer` (`GCKK56MS3CXTGQDWGD6ZEZMB4S65PBWYVVGTZ4XU5RHTYQEOHSLHA2KY`) |
+
+> Modelo: **una instancia del contrato por campaña** (config inmutable en `init`). La
+> instancia de arriba es un smoke de despliegue; cada campaña real despliega su propia
+> instancia (deploy + `init`).
+
+### Cómo desplegar otra instancia
+```bash
+stellar contract deploy --wasm target/wasm32v1-none/release/campaign_controller.wasm \
+  --source behuman-deployer --network testnet
+# luego init (admin debe ser uno de los 3 signers):
+stellar contract invoke --id <NUEVO_ID> --source behuman-deployer --network testnet -- init \
+  --admin <Gadmin> --asset CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC \
+  --cause <Gcause> --goal <i128> --deadline <unix> \
+  --signers '["<Gcause>","<Gplatform>","<Gneutral>"]'
+```
+
+### Pendiente para cerrar la integración real
+1. **DeFindex** (yield/Blend): API key (`api.defindex.io/register`) + un **vault testnet** (su `contract ID`). API confirmada: base `https://api.defindex.io`, auth `Bearer`, patrón `/vault/{address}/{deposit|withdraw|balance|apy}` + `/send` (XDR firmado).
+2. **Trustless Work** (escrow): API key (vía `dapp.trustlesswork.com`) + validar contra Swagger (`api.trustlesswork.com/docs`).
+3. **Cross-contract**: que el `campaign_controller` deposite en el vault DeFindex y sea su Manager (necesita la interfaz del contrato del vault).
+4. **Enrutar release/refund/donate on-chain** contra el contrato (ya despliega y exige `require_auth`).
