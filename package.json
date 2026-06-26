@@ -9,7 +9,8 @@
     "packages/*",
     "identity/issuer",
     "platform/api",
-    "platform/curation"
+    "platform/curation",
+    "funding/api"
   ],
   "scripts": {
     "dev": "npm run dev --workspace web",

@@ -12,6 +12,8 @@ import { encodeProof, fieldTo32, g1ToBytes, g2ToBytes, type SnarkProof } from ".
 export * from "./poseidonBls.js";
 export * from "./merkle.js";
 export * from "./blsEncode.js";
+export * from "./defindex.js";
+export * from "./trustlesswork.js";
 
 const { Address, Contract, TransactionBuilder, Keypair, BASE_FEE, xdr, rpc, scValToNative } =
   StellarSdk;

@@ -1,0 +1,28 @@
+{
+  "name": "@behuman/funding-api",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Backend del funding ZK (CAPA 3): orquesta DeFindex + Trustless Work, campañas, donaciones anónimas, opiniones por campaña",
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "serve": "tsx src/server.ts",
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@behuman/curation": "*",
+    "@behuman/sdk": "*",
+    "@behuman/shared": "*",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.11.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.4.0",
+    "vitest": "^1.6.0"
+  }
+}

@@ -111,3 +111,86 @@ export interface CurationInput {
   handle: string; // últimos 5 del platformId
   content: string; // texto del post a revisar
 }
+
+// ─── CAPA 3 · Funding ZK (DeFindex + Trustless Work) ──────────────────────────
+//
+// Crowdfunding anónimo y condicional. Donar/opinar se gatea por personhood (Capa 1) sin
+// revelar identidad. On-chain solo: proofs, commitments, nullifiers, estados de escrow,
+// anclas de opinión (platformId + contentHash). Activo configurable (XLM en testnet).
+
+/** Activo de la campaña. XLM (nativo) en testnet; stablecoin/USDC en prod (por config). */
+export type FundingAsset = "XLM" | "USDC";
+
+export type MilestoneStatus = "pending" | "submitted" | "approved" | "rejected";
+
+/** Hito/tarea de la causa (se refleja en el escrow de Trustless Work). */
+export interface Milestone {
+  id: string;
+  title: string;
+  description?: string;
+  status: MilestoneStatus;
+  evidenceUri?: string; // evidencia off-chain (sin PII)
+}
+
+/** Estado del escrow / liberación de una campaña. */
+export type EscrowState =
+  | "fundraising" // recaudando (dinero en el vault Blend)
+  | "released" // liberado a la causa (capital + yield)
+  | "refunding" // falló: donantes recuperan sus shares (todo-o-nada)
+  | "disputed"; // en disputa (resuelve el neutral)
+
+/** Campaña de funding. NUNCA contiene PII; las wallets son seudónimos no atables al KYC. */
+export interface Campaign {
+  id: string;
+  title: string;
+  summary: string; // descripción pública de la causa (sin PII)
+  asset: FundingAsset;
+  goalAmount: string; // meta (stroops/unidades del activo, decimal string)
+  raisedAmount: string; // recaudado hasta ahora
+  deadline: number; // epoch ms; éxito = meta antes del deadline
+  causeWallet: string; // Receiver (wallet de la causa)
+  vaultAddress?: string; // vault DeFindex (Blend) de la campaña
+  controllerAddress?: string; // campaign_controller (Manager del vault)
+  escrowId?: string; // escrow de Trustless Work
+  // Validadores del release 2-de-3 (causa + plataforma + neutral). Direcciones, no PII.
+  signers: { cause: string; platform: string; neutral: string };
+  milestones: Milestone[];
+  state: EscrowState;
+  createdAt: number;
+}
+
+/** Aporte anónimo (desde wallet efímera). El monto es visible en el MVP. */
+export interface Donation {
+  campaignId: string;
+  donorWallet: string; // wallet efímera/anónima (NO el address del KYC)
+  amount: string;
+  txHash: string;
+  ts: number;
+}
+
+/** Posición del donante en el vault (shares = base del refund todo-o-nada). */
+export interface VaultPosition {
+  shares: string;
+  underlying: string; // valor actual (capital + yield acumulado)
+  apy: number;
+}
+
+export type Sentiment = "support" | "oppose" | "neutral";
+
+/**
+ * Opinión anónima sobre una campaña (Capa 2 scopeada por campaña).
+ * platformId = Poseidon(secret, "funding:"+campaignId); 1 humano = 1 voz por campaña
+ * (nullifier por campaña). Ancla on-chain (platformId + contentHash) + texto off-chain.
+ */
+export interface CampaignOpinion {
+  id: string;
+  campaignId: string;
+  platformId: string; // seudónimo scopeado a la campaña (no atable al KYC)
+  handle: string; // últimos 5 del platformId
+  content: string; // texto off-chain
+  contentHash: string;
+  sentiment: Sentiment;
+  txHash: string;
+  curation: CurationVerdict;
+  ts: number;
+}
