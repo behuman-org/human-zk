@@ -9,14 +9,16 @@ import "./SidebarNav.css";
 
 export function SidebarNav() {
   const { user } = useUser();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const n = t.social.nav;
+  const causasLabel = locale === "es" ? "Causas" : "Causes";
   const [unreadNotif, setUnreadNotif] = useState(0);
   const [unreadMsg, setUnreadMsg] = useState(0);
 
   const desktopNav = [
     { to: "/app", label: n.feed, end: true as const },
     { to: "/app/explore", label: n.threads, end: false as const },
+    { to: "/app/causes", label: causasLabel, end: false as const },
     { to: "/app/messages", label: n.messages, end: false as const, msgBadge: true as const },
     { to: "/app/notifications", label: n.notifications, end: false as const, notifBadge: true as const },
     { to: "/app/settings", label: n.settings, end: false as const, desktopOnly: true as const },

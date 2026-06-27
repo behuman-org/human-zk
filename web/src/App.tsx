@@ -1,5 +1,7 @@
 import { Route, Routes } from "react-router-dom";
 import { AuthPage } from "./pages/AuthPage";
+import { CampaignDetailPage } from "./pages/CampaignDetailPage";
+import { CausesPage } from "./pages/CausesPage";
 import { ComposePage } from "./pages/ComposePage";
 import { ExplorePage } from "./pages/ExplorePage";
 import { FeedPage } from "./pages/FeedPage";
@@ -19,6 +21,8 @@ function App() {
         <Route index element={<FeedPage />} />
         <Route path="r/:communityId" element={<FeedPage />} />
         <Route path="explore" element={<ExplorePage />} />
+        <Route path="causes" element={<CausesPage />} />
+        <Route path="causes/:id" element={<CampaignDetailPage />} />
         <Route path="profile" element={<ProfilePage />} />
         <Route path="u/:platformId" element={<ProfilePage />} />
         <Route path="compose" element={<ComposePage />} />

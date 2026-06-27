@@ -22,6 +22,10 @@ export async function listCampaigns(): Promise<Campaign[]> {
   return json(await fetch(`${BASE}/campaigns`));
 }
 
+export async function getCampaign(id: string): Promise<Campaign> {
+  return json(await fetch(`${BASE}/campaigns/${id}`));
+}
+
 export interface MembershipProof {
   proof: unknown;
   publicSignals: string[];
