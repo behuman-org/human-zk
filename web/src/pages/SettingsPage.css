@@ -1,0 +1,199 @@
+.settings-page__section {
+  padding: 1rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.settings-page__heading {
+  margin: 0 0 0.85rem;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.settings-page__group {
+  margin-bottom: 0.85rem;
+}
+
+.settings-page__label {
+  margin: 0 0 0.45rem;
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.settings-page__hint {
+  margin: 0 0 0.75rem;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  line-height: 1.45;
+}
+
+.settings-page__segment {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.settings-page__segment-btn {
+  flex: 1 1 auto;
+  min-width: 5.5rem;
+  padding: 0.55rem 0.85rem;
+  font-family: inherit;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  background: var(--color-bg-deep);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition:
+    background var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out);
+}
+
+.settings-page__segment-btn.is-active {
+  color: var(--color-accent-deep);
+  background: var(--color-accent-subtle);
+  border-color: var(--color-accent-border);
+}
+
+.settings-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 0;
+  border-top: 1px solid var(--color-border);
+  cursor: pointer;
+}
+
+.settings-toggle:first-of-type {
+  border-top: none;
+  padding-top: 0;
+}
+
+.settings-toggle__copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.settings-toggle__label {
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.settings-toggle__desc {
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
+  line-height: 1.4;
+}
+
+.settings-toggle__input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.settings-toggle__track {
+  position: relative;
+  flex-shrink: 0;
+  width: 2.75rem;
+  height: 1.55rem;
+  background: var(--color-neutral-300);
+  border-radius: var(--radius-pill);
+  transition: background var(--duration-fast) var(--ease-out);
+}
+
+.settings-toggle__track::after {
+  content: "";
+  position: absolute;
+  top: 0.15rem;
+  left: 0.15rem;
+  width: 1.25rem;
+  height: 1.25rem;
+  background: var(--color-on-accent);
+  border-radius: 50%;
+  box-shadow: 0 1px 3px var(--shell-shadow);
+  transition: transform var(--duration-fast) var(--ease-out);
+}
+
+.settings-toggle__input:checked + .settings-toggle__track {
+  background: var(--color-accent);
+}
+
+.settings-toggle__input:checked + .settings-toggle__track::after {
+  transform: translateX(1.15rem);
+}
+
+.settings-page__static {
+  padding: 0.65rem 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.settings-page__static:first-of-type {
+  border-top: none;
+  padding-top: 0;
+}
+
+.settings-page__static-title {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.settings-page__static-desc {
+  margin: 0.2rem 0 0;
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
+  line-height: 1.4;
+}
+
+.settings-page__link-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 18rem;
+  padding: 0.6rem 1rem;
+  font-weight: 700;
+  color: var(--color-accent-deep);
+  background: var(--color-accent-subtle);
+  border: 1px solid var(--color-accent-border);
+  border-radius: var(--radius-pill);
+  transition: background var(--duration-fast) var(--ease-out);
+}
+
+.settings-page__link-btn:hover {
+  background: color-mix(in srgb, var(--color-accent) 14%, transparent);
+}
+
+.settings-page__reset {
+  display: block;
+  margin-top: 1rem;
+  padding: 0;
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+.settings-page__reset:hover {
+  color: var(--color-text);
+}
+
+@media (max-width: 480px) {
+  .settings-page__section {
+    padding: 0.85rem;
+  }
+
+  .settings-page__segment-btn {
+    min-width: calc(50% - 0.25rem);
+  }
+}

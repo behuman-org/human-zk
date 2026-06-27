@@ -1,0 +1,76 @@
+/* Magic Bento — React Bits (adaptado tema claro beHuman) */
+
+.magic-bento-section {
+  position: relative;
+}
+
+.magic-bento-card {
+  position: relative;
+  overflow: hidden;
+  --glow-x: 50%;
+  --glow-y: 50%;
+  --glow-intensity: 0;
+  --glow-radius: 200px;
+}
+
+.magic-bento-card--border-glow::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  padding: 1px;
+  border-radius: inherit;
+  background: radial-gradient(
+    var(--glow-radius) circle at var(--glow-x) var(--glow-y),
+    rgba(var(--glow-rgb, 14, 165, 233), calc(var(--glow-intensity) * 0.35)) 0%,
+    rgba(var(--glow-rgb, 14, 165, 233), calc(var(--glow-intensity) * 0.12)) 30%,
+    transparent 60%
+  );
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 1;
+  transition: opacity 0.25s ease;
+}
+
+.magic-bento-card:hover {
+  box-shadow:
+    0 4px 20px rgba(14, 165, 233, 0.08),
+    0 0 0 1px rgba(14, 165, 233, 0.06);
+}
+
+.magic-bento__spotlight {
+  position: fixed;
+  width: 560px;
+  height: 560px;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 200;
+  opacity: 0;
+  transform: translate(-50%, -50%);
+  mix-blend-mode: multiply;
+}
+
+.magic-bento__ripple {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 3;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .magic-bento-card--border-glow::after {
+    display: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .magic-bento-card--border-glow::after {
+    display: none;
+  }
+}

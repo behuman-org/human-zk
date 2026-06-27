@@ -1,0 +1,31 @@
+.dot-region {
+  position: relative;
+  isolation: isolate;
+  background: linear-gradient(
+    180deg,
+    var(--color-bg-deep) 0%,
+    var(--color-bg) 42%,
+    var(--color-bg-deep) 100%
+  );
+}
+
+.dot-region__backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.dot-region__content {
+  position: relative;
+  z-index: 1;
+}
+
+/* Sin fondo sólido en secciones: el puntillismo se ve en todo el bloque */
+.dot-region .page-section {
+  background: transparent;
+}
+
+.dot-region .section-divider {
+  background: transparent;
+}

@@ -1,0 +1,78 @@
+.page-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+  background: linear-gradient(
+    180deg,
+    var(--color-bg-tint) 0%,
+    var(--color-bg) 48%,
+    var(--color-bg-deep) 100%
+  );
+}
+
+.page-backdrop__halo {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(90px);
+  opacity: 0.45;
+  animation: page-backdrop-drift 24s ease-in-out infinite alternate;
+}
+
+.page-backdrop__halo--a {
+  width: min(50vw, 28rem);
+  height: min(50vw, 28rem);
+  top: 10%;
+  left: -10%;
+  background: radial-gradient(
+    circle,
+    var(--bg-celeste-halo) 0%,
+    var(--bg-celeste-halo-soft) 50%,
+    transparent 72%
+  );
+}
+
+.page-backdrop__halo--b {
+  width: min(44vw, 22rem);
+  height: min(44vw, 22rem);
+  top: 45%;
+  right: -12%;
+  background: radial-gradient(
+    circle,
+    rgba(212, 212, 212, 0.45) 0%,
+    rgba(228, 228, 228, 0.18) 55%,
+    transparent 72%
+  );
+  animation-delay: -8s;
+  animation-duration: 28s;
+}
+
+.page-backdrop__halo--c {
+  width: min(36vw, 18rem);
+  height: min(36vw, 18rem);
+  bottom: 10%;
+  left: 30%;
+  background: radial-gradient(
+    circle,
+    rgba(180, 180, 180, 0.3) 0%,
+    transparent 70%
+  );
+  animation-delay: -14s;
+  animation-duration: 32s;
+}
+
+@keyframes page-backdrop-drift {
+  from {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  to {
+    transform: translate3d(2%, 2%, 0) scale(1.04);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-backdrop__halo {
+    animation: none;
+  }
+}

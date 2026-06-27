@@ -1,0 +1,35 @@
+.user-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 50%;
+  color: var(--color-on-accent);
+  font-weight: 700;
+  user-select: none;
+}
+
+.user-avatar--sm {
+  width: 2rem;
+  height: 2rem;
+  font-size: 0.8rem;
+}
+
+.user-avatar--md {
+  width: 2.5rem;
+  height: 2.5rem;
+  font-size: 0.95rem;
+}
+
+.user-avatar--lg {
+  width: 4.5rem;
+  height: 4.5rem;
+  font-size: 1.75rem;
+  border: 3px solid var(--color-bg-deep);
+}
+
+.user-avatar--verified {
+  box-shadow:
+    0 0 0 2px var(--color-bg-deep),
+    0 0 0 3.5px var(--color-accent);
+}

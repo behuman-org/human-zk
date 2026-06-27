@@ -1,0 +1,163 @@
+.voice-composer {
+  margin: 0.75rem 0.75rem 1rem;
+  padding: 1rem;
+  background: var(--color-bg-tint);
+  border: 1px solid var(--color-accent-border);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 4px 24px rgba(14, 165, 233, 0.06);
+}
+
+.voice-composer__head {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.voice-composer__greet {
+  margin: 0;
+  font-size: 0.92rem;
+  color: var(--color-text);
+}
+
+.voice-composer__context {
+  margin: 0 0 0.65rem;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+.voice-composer__context-chip {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  font-weight: 700;
+  color: var(--chip-accent, var(--color-accent-deep));
+  background: color-mix(in srgb, var(--chip-accent, var(--color-accent)) 10%, var(--color-mix-base));
+  border-radius: var(--radius-pill);
+}
+
+.voice-composer__rule {
+  margin: 0.15rem 0 0;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-accent-deep);
+}
+
+.voice-composer__input {
+  width: 100%;
+  min-height: 4.5rem;
+  padding: 0.65rem 0.75rem;
+  font-family: inherit;
+  font-size: 1.05rem;
+  line-height: 1.5;
+  color: var(--color-text);
+  background: var(--color-bg-deep);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  resize: vertical;
+}
+
+.voice-composer__input:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-accent-glow);
+}
+
+.voice-composer__input::placeholder {
+  color: var(--color-text-dim);
+}
+
+.voice-composer__communities {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+  margin-top: 0.75rem;
+}
+
+.voice-composer__communities-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+}
+
+.voice-composer__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.voice-composer__chip {
+  padding: 0.3rem 0.65rem;
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--chip-accent, var(--color-accent-deep));
+  background: color-mix(in srgb, var(--chip-accent, var(--color-accent)) 10%, var(--color-mix-base));
+  border: 1px solid color-mix(in srgb, var(--chip-accent, var(--color-accent)) 25%, transparent);
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition:
+    background var(--duration-fast) var(--ease-out),
+    transform var(--duration-fast) var(--ease-out);
+}
+
+.voice-composer__chip:hover {
+  transform: translateY(-1px);
+}
+
+.voice-composer__chip.is-picked {
+  background: color-mix(in srgb, var(--chip-accent, var(--color-accent)) 18%, var(--color-mix-base));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--chip-accent, var(--color-accent)) 35%, transparent);
+}
+
+.voice-composer__bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 0.85rem;
+}
+
+.voice-composer__count {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.voice-composer__count.is-warn {
+  color: var(--color-warn-text);
+}
+
+.voice-composer__submit {
+  padding: 0.55rem 1.25rem;
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: var(--color-on-accent);
+  background: var(--btn-accent, var(--color-accent));
+  border: none;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition:
+    filter var(--duration-fast) var(--ease-out),
+    transform var(--duration-fast) var(--ease-out);
+}
+
+.voice-composer__submit:not(:disabled):hover {
+  filter: brightness(0.95);
+  transform: translateY(-1px);
+}
+
+.voice-composer__submit:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+@media (max-width: 480px) {
+  .voice-composer {
+    margin: 0.5rem 0.5rem 0.75rem;
+    padding: 0.85rem;
+  }
+}

@@ -1,0 +1,220 @@
+.social-shell {
+  min-height: 100vh;
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+.social-shell__grid {
+  display: grid;
+  min-height: 100vh;
+  width: 100%;
+  max-width: 80rem;
+  margin: 0 auto;
+}
+
+.social-shell__main {
+  width: 100%;
+  min-width: 0;
+}
+
+.feed-column {
+  min-height: 100vh;
+  background: var(--color-bg);
+}
+
+.feed-column__top {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--shell-header-bg);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.feed-column__top--feed {
+  padding: 0.85rem 1rem;
+}
+
+.feed-column__subtitle {
+  margin: 0.2rem 0 0;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.feed-stream {
+  padding-bottom: calc(1rem + var(--safe-bottom));
+}
+
+.feed-column__title {
+  margin: 0;
+  font-size: clamp(1.05rem, 3vw, 1.15rem);
+  font-weight: 800;
+}
+
+.feed-column__tabs {
+  display: flex;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.feed-column__tab {
+  flex: 1;
+  min-height: 2.75rem;
+  padding: 0.85rem 0.5rem;
+  font-family: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition:
+    color var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out);
+}
+
+.feed-column__tab:hover {
+  background: var(--color-row-hover);
+}
+
+.feed-column__tab.is-active {
+  color: var(--color-text);
+  border-bottom-color: var(--color-accent);
+  font-weight: 700;
+}
+
+.community-banner {
+  padding: 1.1rem 1rem 1rem;
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--banner-accent, var(--color-accent)) 14%, var(--color-bg-deep)),
+    var(--color-bg-deep)
+  );
+  border-bottom: 1px solid color-mix(in srgb, var(--banner-accent, var(--color-accent)) 25%, var(--color-border));
+}
+
+.community-banner__eyebrow {
+  margin: 0 0 0.25rem;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--banner-accent, var(--color-accent-deep));
+}
+
+.community-banner__name {
+  margin: 0;
+  font-size: clamp(1.2rem, 4vw, 1.45rem);
+  font-weight: 800;
+}
+
+.community-banner__desc {
+  margin: 0.25rem 0 0.65rem;
+  font-size: 0.88rem;
+  color: var(--color-text-muted);
+}
+
+.community-banner__meta {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.feed-empty {
+  padding: 2.5rem 1rem;
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: 0.92rem;
+}
+
+/* Desktop: 3 columnas */
+@media (min-width: 1024px) {
+  .social-shell__grid {
+    grid-template-columns: 16.5rem minmax(0, 37.5rem) 1fr;
+  }
+
+  .social-shell__left {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    border-right: 1px solid var(--color-border);
+  }
+
+  .social-shell__main {
+    min-height: 100vh;
+    border-right: 1px solid var(--color-border);
+  }
+
+  .social-shell__right {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    padding-left: 1.25rem;
+  }
+}
+
+/* Tablet: feed + panel debajo */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .social-shell__grid {
+    grid-template-columns: 1fr;
+    max-width: 42rem;
+    padding: 0 0.5rem;
+  }
+
+  .social-shell__left {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 50;
+  }
+
+  .social-shell__main {
+    padding-bottom: 4.25rem;
+  }
+
+  .social-shell__right {
+    padding: 0 0.5rem 5rem;
+    border-top: 1px solid var(--color-border);
+  }
+}
+
+/* Mobile */
+@media (max-width: 767px) {
+  .social-shell__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .social-shell__left {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 50;
+  }
+
+  .social-shell__main {
+    padding-bottom: calc(4.25rem + var(--safe-bottom));
+  }
+
+  .social-shell__right {
+    display: none;
+  }
+
+  .feed-column__top,
+  .feed-column__top--feed {
+    padding: 0.75rem 0.85rem;
+  }
+
+  .voice-card {
+    margin-left: 0.5rem;
+    margin-right: 0.5rem;
+  }
+
+  .voice-composer {
+    margin-left: 0.5rem;
+    margin-right: 0.5rem;
+  }
+}

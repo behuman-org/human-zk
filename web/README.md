@@ -1,9 +1,19 @@
 # web · Frontend (React + Vite + TypeScript)
 
-La app de beHuman. Capa 1: **gate de identidad en vivo** — consentimiento → foto del DNI →
-escaneo de cara con la cámara → resultado (match 1:1 + liveness). Postea al backend matcher.
+La app de beHuman: **landing** (onboarding del producto) + **flujos en vivo** de Capa 1 y Capa 2.
 
-> 📐 `Flujo de KYC` · `Spec — Matcher DNI + Selfie (Capa 1)` en la vault.
+> 📐 Diseño landing: inspiración [zk.me](https://www.zk.me/) — ver **`web/docs/DESIGN.md`**
+> 📐 Flujo KYC en vault: `Flujo de KYC` · `Spec — Matcher DNI + Selfie (Capa 1)`
+
+## Documentación
+
+Toda la documentación del frontend vive en **`web/docs/`**:
+
+- [Índice](./docs/README.md)
+- [Design system](./docs/DESIGN.md)
+- [Copy / contenido](./docs/COPY.md)
+- [Componentes](./docs/COMPONENTS.md)
+- [Implementación](./docs/IMPLEMENTATION.md)
 
 ## Desarrollo
 
@@ -16,18 +26,41 @@ npm run dev -w @behuman/web         # frontend en :5173
 Abre http://localhost:5173. La cámara requiere contexto seguro (localhost o https).
 Config: `VITE_MATCHER_URL` (default `http://localhost:8787`).
 
+## Rama de trabajo
+
+Frontend: `feat/web-onboarding` (una feature = una rama).
+
 ## Estructura
 
 ```text
-web/src/
-├── App.tsx              # monta el flujo
-└── kyc/
-    ├── Consent.tsx      # consentimiento (Ley 25.326)
-    ├── DocumentUpload.tsx
-    ├── FaceScan.tsx     # getUserMedia + challenge (parpadeo/giro)
-    ├── KycFlow.tsx      # máquina de estados del gate
-    └── api.ts           # POST /verify (multipart)
+web/
+├── docs/                 # documentación (design, componentes, changelog)
+├── index.html
+├── vite.config.ts
+└── src/
+    ├── content/          # copy centralizado (site.ts)
+    ├── components/
+    │   ├── hero/         # HeroSection, HeroBackground (canvas)
+    │   ├── layout/       # SiteNav, SiteFooter
+    │   ├── sections/     # HowItWorks, Stats, Compare
+    │   └── ui/           # Button, Badge
+    ├── hooks/            # pointer spring/trail, reduced motion
+    ├── kyc/              # gate Capa 1 (consent → DNI → cara → ZK)
+    ├── platform/         # opinión + moderación (Capa 2)
+    ├── styles/           # tokens.css, global.css
+    ├── test/             # setup vitest
+    ├── App.tsx
+    └── main.tsx
 ```
+
+## Scripts
+
+| Comando | Descripción |
+|---------|-------------|
+| `npm run dev` | Vite dev server |
+| `npm run build` | copy circuit + typecheck + bundle |
+| `npm run test` | Vitest |
+| `npm run lint` | ESLint |
 
 ## Privacidad
 
@@ -36,6 +69,4 @@ Las imágenes van al backend por multipart y **no se persisten**; el backend dev
 
 ## Próximos pasos
 
-- Commitment no-custodial en el navegador (Poseidon-bls vía wasm) + `/enroll`.
-- Conexión de wallet (Stellar Wallets Kit) y `verify_and_register` desde el cliente.
-- Hoy el registro on-chain se demuestra vía `scripts/e2e_demo.sh` (SDK en Node).
+Ver checklist en [docs/IMPLEMENTATION.md](./docs/IMPLEMENTATION.md).

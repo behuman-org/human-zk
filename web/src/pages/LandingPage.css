@@ -1,0 +1,11 @@
+.landing {
+  position: relative;
+  min-height: 100vh;
+}
+
+.landing__main {
+  position: relative;
+  z-index: 1;
+  max-width: 100%;
+  overflow-x: clip;
+}

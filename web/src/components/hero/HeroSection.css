@@ -1,0 +1,127 @@
+.hero {
+  position: relative;
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: calc(5.5rem + var(--safe-top)) var(--space-gutter) calc(3rem + var(--safe-bottom));
+  overflow: hidden;
+}
+
+.hero__content {
+  position: relative;
+  z-index: 1;
+  max-width: var(--content-max);
+  margin: 0 auto;
+  width: 100%;
+  min-width: 0;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.hero__title {
+  margin: 1.25rem 0 0;
+  font-size: clamp(1.85rem, 6vw, 3.75rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  max-width: 22ch;
+  overflow-wrap: anywhere;
+}
+
+.hero__accent {
+  display: block;
+  margin-top: 0.15em;
+  font-style: italic;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.hero__lead {
+  margin: 1.5rem 0 0;
+  max-width: 38rem;
+  font-size: clamp(1rem, 2.2vw, 1.125rem);
+  color: var(--color-text-muted);
+  line-height: 1.65;
+}
+
+.hero__actions {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 22rem;
+  gap: 0.75rem;
+  justify-content: center;
+  margin-top: 2rem;
+}
+
+.hero__actions .btn {
+  width: 100%;
+}
+
+@media (min-width: 480px) {
+  .hero__actions {
+    flex-direction: row;
+    flex-wrap: wrap;
+    max-width: none;
+    width: auto;
+  }
+
+  .hero__actions .btn {
+    width: auto;
+  }
+}
+
+.hero__chains {
+  margin-top: 3.5rem;
+  font-size: 0.8rem;
+  font-style: italic;
+  color: var(--color-text-dim);
+}
+
+.hero__marquee {
+  width: 100%;
+  max-width: 100%;
+  margin-top: 0.75rem;
+  overflow: hidden;
+  contain: strict;
+  mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+}
+
+.hero__marquee-track {
+  display: flex;
+  gap: 2.5rem;
+  width: max-content;
+  animation: hero-marquee 28s linear infinite;
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.hero__marquee-track span {
+  white-space: nowrap;
+  opacity: 0.7;
+}
+
+@keyframes hero-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero__marquee-track {
+    animation: none;
+    flex-wrap: wrap;
+    justify-content: center;
+    width: auto;
+    gap: 1rem;
+  }
+}

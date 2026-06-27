@@ -1,0 +1,75 @@
+.hero-bg {
+  position: absolute;
+  inset: 0;
+  overflow: clip;
+  contain: paint;
+  pointer-events: none;
+  z-index: 0;
+  background: linear-gradient(
+    165deg,
+    var(--color-bg-tint) 0%,
+    var(--color-bg-deep) 38%,
+    var(--color-bg) 100%
+  );
+}
+
+.hero-bg__glow {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background:
+    radial-gradient(
+      ellipse 72% 58% at 14% 22%,
+      var(--bg-celeste-halo) 0%,
+      var(--bg-celeste-halo-soft) 48%,
+      transparent 72%
+    ),
+    radial-gradient(
+      ellipse 50% 42% at 88% 58%,
+      rgba(56, 189, 248, 0.09) 0%,
+      transparent 68%
+    );
+  pointer-events: none;
+}
+
+.hero-bg__terminal {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  opacity: 0.68;
+  mix-blend-mode: multiply;
+  pointer-events: auto;
+}
+
+.hero-bg__wash {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background: linear-gradient(
+    180deg,
+    rgba(240, 249, 255, 0.22) 0%,
+    rgba(255, 255, 255, 0.55) 52%,
+    rgba(255, 255, 255, 0.84) 100%
+  );
+  pointer-events: none;
+}
+
+.hero-bg__vignette {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  background: radial-gradient(
+    ellipse 90% 75% at 50% 42%,
+    transparent 0%,
+    rgba(255, 255, 255, 0.14) 68%,
+    rgba(255, 255, 255, 0.52) 100%
+  );
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-bg__terminal {
+    opacity: 0.45;
+    mix-blend-mode: normal;
+  }
+}

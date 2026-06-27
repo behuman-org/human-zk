@@ -1,0 +1,26 @@
+.create-thread-modal__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.create-thread-modal__name-row {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.create-thread-modal__prefix {
+  font-weight: 800;
+  color: var(--color-accent-deep);
+}
+
+.create-thread-modal__name-row input {
+  flex: 1;
+}
+
+.create-thread-modal__error {
+  margin: 0.35rem 0 0;
+  font-size: 0.85rem;
+  color: var(--color-error);
+}

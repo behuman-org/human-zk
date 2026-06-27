@@ -1,0 +1,104 @@
+.tech-marquee {
+  position: relative;
+  z-index: 1;
+  padding: 2rem var(--space-gutter) 2.5rem;
+  background: var(--color-bg);
+  border-top: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.tech-marquee__intro {
+  max-width: var(--content-max);
+  margin: 0 auto 1.25rem;
+  text-align: center;
+}
+
+.tech-marquee__label {
+  margin: 0 0 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-accent-deep);
+}
+
+.tech-marquee__lead {
+  margin: 0;
+  font-size: clamp(0.95rem, 2.2vw, 1.05rem);
+  color: var(--color-text-muted);
+  line-height: 1.5;
+}
+
+.tech-marquee__track-wrap {
+  overflow: hidden;
+  max-width: 100%;
+  mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+}
+
+.tech-marquee__track {
+  display: flex;
+  gap: 0.75rem;
+  width: max-content;
+  padding: 0.25rem 0;
+  animation: tech-marquee-scroll 42s linear infinite;
+}
+
+.tech-marquee__pill {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  padding: 0.65rem 1rem;
+  min-width: 9.5rem;
+  border-radius: var(--radius-md);
+  background: var(--color-bg-deep);
+  border: 1px solid var(--color-border);
+  box-shadow:
+    0 2px 12px rgba(10, 10, 10, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.tech-marquee__pill-name {
+  font-size: 0.875rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--color-text);
+}
+
+.tech-marquee__pill-hint {
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+  line-height: 1.3;
+}
+
+@keyframes tech-marquee-scroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tech-marquee__track {
+    animation: none;
+    flex-wrap: wrap;
+    justify-content: center;
+    width: auto;
+    max-width: var(--content-max);
+    margin: 0 auto;
+    gap: 0.65rem;
+  }
+
+  .tech-marquee__pill {
+    min-width: 0;
+    flex: 1 1 10rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .tech-marquee {
+    padding: 2.5rem var(--space-gutter) 3rem;
+  }
+}

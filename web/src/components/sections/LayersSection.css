@@ -1,0 +1,80 @@
+.layers {
+  background: transparent;
+}
+
+.layers__grid {
+  display: grid;
+  gap: 1.25rem;
+  margin-top: 2.5rem;
+}
+
+@media (min-width: 900px) {
+  .layers__grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.layer-card {
+  padding: clamp(1.15rem, 4vw, 1.75rem);
+  background: var(--color-bg-deep);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+}
+
+.layer-card__tag {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-accent-deep);
+  background: var(--color-accent-subtle);
+  border: 1px solid var(--color-accent-border);
+  padding: 0.2rem 0.55rem;
+  border-radius: var(--radius-pill);
+  margin-bottom: 0.75rem;
+}
+
+.layer-card__title {
+  margin: 0 0 0.75rem;
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
+.layer-card__body {
+  margin: 0 0 1rem;
+  font-size: 0.95rem;
+  color: var(--color-text-muted);
+  line-height: 1.6;
+}
+
+.layer-card__list {
+  margin: 0;
+  padding-left: 1.15rem;
+  font-size: 0.88rem;
+  color: var(--color-text-muted);
+  line-height: 1.55;
+}
+
+.layer-card__list li + li {
+  margin-top: 0.35rem;
+}
+
+.layers__bridge {
+  margin: 2rem 0 0;
+  text-align: center;
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
+  overflow-wrap: anywhere;
+}
+
+.inline-code {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  color: var(--color-neutral-700);
+  background: var(--color-bg-elevated);
+  padding: 0.15rem 0.45rem;
+  border-radius: 0.35rem;
+  border: 1px solid var(--color-border);
+  overflow-wrap: anywhere;
+}
