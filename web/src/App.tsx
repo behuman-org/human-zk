@@ -6,6 +6,7 @@ import { FeedPage } from "./pages/FeedPage";
 import { LandingPage } from "./pages/LandingPage";
 import { MessagesPage } from "./pages/MessagesPage";
 import { NotificationsPage } from "./pages/NotificationsPage";
+import { OnboardingPage } from "./pages/OnboardingPage";
 import { ProfilePage } from "./pages/ProfilePage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { SocialShell } from "./pages/SocialShell";
@@ -26,6 +27,7 @@ function App() {
         <Route path="notifications" element={<NotificationsPage />} />
         <Route path="settings" element={<SettingsPage />} />
       </Route>
+      <Route path="/onboarding" element={<OnboardingPage />} />
       <Route path="/login" element={<AuthPage defaultTab="login" />} />
       <Route path="/register" element={<AuthPage defaultTab="register" />} />
     </Routes>

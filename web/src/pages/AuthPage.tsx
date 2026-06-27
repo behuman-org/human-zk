@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import SideRays from "../components/backgrounds/SideRays/SideRays";
 import { LanguageToggle } from "../components/ui/LanguageToggle";
 import { useI18n } from "../i18n/I18nProvider";
 import { useReducedMotion } from "../hooks/useReducedMotion";
+import { connectAndCheck, hasCredential } from "../identity/identity";
 import "./AuthPage.css";
 
 type AuthTab = "login" | "register";
@@ -11,8 +12,25 @@ type AuthTab = "login" | "register";
 export function AuthPage({ defaultTab = "login" }: { defaultTab?: AuthTab }) {
   const { t } = useI18n();
   const auth = t.auth;
+  const navigate = useNavigate();
   const [tab, setTab] = useState<AuthTab>(defaultTab);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const reducedMotion = useReducedMotion();
+
+  // Login: conecta wallet → si ya es humano verificado (o hay credencial), entra; si no, verifica.
+  async function handleLogin() {
+    setError(null);
+    setBusy(true);
+    try {
+      const { verified } = await connectAndCheck();
+      navigate(verified || hasCredential() ? "/app" : "/onboarding");
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
 
   return (
     <div className="auth-page">
@@ -61,11 +79,16 @@ export function AuthPage({ defaultTab = "login" }: { defaultTab?: AuthTab }) {
                 <p className="auth-page__status-body">{auth.loginPanelBody}</p>
               </div>
 
-              <button type="button" className="auth-page__submit" disabled>
-                {auth.connectWallet}
+              <button
+                type="button"
+                className="auth-page__submit"
+                onClick={handleLogin}
+                disabled={busy}
+              >
+                {busy ? "…" : auth.connectWallet}
               </button>
 
-              <p className="auth-page__hint auth-page__hint--warn">{auth.comingSoon}</p>
+              {error && <p className="auth-page__hint auth-page__hint--warn">{error}</p>}
             </div>
           ) : (
             <div className="auth-page__panel">
@@ -83,11 +106,13 @@ export function AuthPage({ defaultTab = "login" }: { defaultTab?: AuthTab }) {
                 ))}
               </ol>
 
-              <button type="button" className="auth-page__submit" disabled>
+              <button
+                type="button"
+                className="auth-page__submit"
+                onClick={() => navigate("/onboarding")}
+              >
                 {auth.startVerification}
               </button>
-
-              <p className="auth-page__hint auth-page__hint--warn">{auth.comingSoon}</p>
             </div>
           )}
 

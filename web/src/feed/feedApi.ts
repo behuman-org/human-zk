@@ -2,6 +2,7 @@ import { GENERAL_FEED_ID } from "./constants";
 import * as platformApi from "./platformApi";
 import { PlatformApiError } from "./platformApi";
 import { avatarColor, handleOf, loadSession } from "./session";
+import { anchorOpinion } from "../identity/post";
 import type {
   AppNotification,
   Community,
@@ -132,13 +133,13 @@ export async function fetchFeed(opts?: {
 }
 
 export async function publishPost(input: NewPostInput): Promise<FeedPost> {
-  const session = loadSession();
   const content = input.content.trim();
-  const contentHash = await platformApi.computeContentHash(content);
-  const txHash = import.meta.env.VITE_OPINION_BOARD_CONTRACT_ID ? "" : "pending_onchain";
+  // Cadena real Capa 2: prueba ZK + ancla on-chain (opinion_board) con cuenta efímera.
+  // platformId/contentHash/txHash salen del ancla; la identidad real no se expone en la UI.
+  const { platformId, contentHash, txHash } = await anchorOpinion(content);
 
   const item = await platformApi.postContent({
-    platformId: session.platformId,
+    platformId,
     content,
     contentHash,
     txHash,
@@ -146,7 +147,7 @@ export async function publishPost(input: NewPostInput): Promise<FeedPost> {
   });
 
   return {
-    ...mapApiItem(item, session.platformId),
+    ...mapApiItem(item, platformId),
     communityId: input.communityId,
     isOwn: true,
   };
