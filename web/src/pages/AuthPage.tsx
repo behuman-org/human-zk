@@ -74,19 +74,36 @@ export function AuthPage({ defaultTab = "login" }: { defaultTab?: AuthTab }) {
 
           {tab === "login" ? (
             <div className="auth-page__panel">
-              <div className="auth-page__status is-muted">
-                <p className="auth-page__status-title">{auth.loginPanelTitle}</p>
-                <p className="auth-page__status-body">{auth.loginPanelBody}</p>
-              </div>
-
+              {/* Dos rutas claras para no confundir: ya tengo wallet · o creo una con email. */}
               <button
                 type="button"
                 className="auth-page__submit"
                 onClick={handleLogin}
                 disabled={busy}
               >
-                {busy ? "…" : auth.connectWallet}
+                {busy ? "…" : "Conectar mi wallet"}
               </button>
+              <p className="auth-page__hint">Si ya tenés una wallet (Freighter, xBull, LOBSTR…).</p>
+
+              <div className="auth-page__pollar">
+                <span className="auth-page__or">o</span>
+                {POLLAR_ENABLED ? (
+                  <PollarEmailLogin onReady={() => navigate("/onboarding?via=email")} />
+                ) : (
+                  <button
+                    type="button"
+                    className="auth-page__submit auth-page__submit--alt"
+                    disabled
+                    title="Configurá VITE_POLLAR_PUBLISHABLE_KEY en .env para habilitar Pollar"
+                  >
+                    Crear cuenta con email
+                  </button>
+                )}
+                <p className="auth-page__hint">
+                  ¿No tenés wallet? Te creamos una con tu email. <strong>Nunca se vincula</strong> a
+                  tu identidad anónima.
+                </p>
+              </div>
 
               {error && <p className="auth-page__hint auth-page__hint--warn">{error}</p>}
             </div>

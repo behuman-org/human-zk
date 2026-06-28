@@ -561,3 +561,10 @@
 .auth-page__pollar .btn {
   width: 100%;
 }
+
+/* Botón alternativo (crear con email) cuando Pollar aún no está configurado. */
+.auth-page__submit--alt {
+  background: var(--color-bg-elevated);
+  color: var(--color-text);
+  border: 1px solid var(--color-border-strong);
+}
