@@ -76,7 +76,7 @@ export function SidebarNav() {
 
   return (
     <nav className="sidebar-nav" aria-label="Navegación principal">
-      <Link to="/app" className="sidebar-nav__logo">
+      <Link to="/" className="sidebar-nav__logo" aria-label={`${brand.wordmark} — inicio`}>
         <img src={brand.logoHorizontal} alt={brand.wordmark} />
       </Link>
 

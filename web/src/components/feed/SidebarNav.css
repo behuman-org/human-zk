@@ -7,8 +7,16 @@
   background: var(--shell-nav-bg);
 }
 
+.sidebar-nav__logo {
+  display: block;
+  padding: 0.35rem 0.15rem 0.6rem;
+  transition: opacity var(--duration-fast) var(--ease-out);
+}
+.sidebar-nav__logo:hover {
+  opacity: 0.8;
+}
 .sidebar-nav__logo img {
-  height: 2.75rem;
+  height: 4rem;
   width: auto;
   display: block;
 }
