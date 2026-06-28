@@ -17,6 +17,20 @@ export interface ApiFeedItem {
   curation: { status: CurationStatus; reason?: string };
   ts: number;
   communityId?: string;
+  replyCount?: number;
+}
+
+export interface ApiReply {
+  id: string;
+  parentId: string;
+  platformId: string;
+  handle: string;
+  username: string;
+  content: string;
+  contentHash: string;
+  txHash: string;
+  curation: { status: CurationStatus; reason?: string };
+  ts: number;
 }
 
 export interface ApiProfile {
@@ -152,6 +166,27 @@ export async function postContent(body: {
   communityId?: string;
 }): Promise<ApiFeedItem> {
   return request<ApiFeedItem>("/content", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+/** Un post (o respuesta) por id — para la vista de hilo. */
+export async function getPost(id: string): Promise<ApiFeedItem> {
+  return request<ApiFeedItem>(`/posts/${encodeURIComponent(id)}`);
+}
+
+/** Respuestas directas de un tweet (orden cronológico ascendente). */
+export async function getReplies(parentId: string): Promise<ApiReply[]> {
+  return request<ApiReply[]>(`/posts/${encodeURIComponent(parentId)}/replies`);
+}
+
+/** Ancla off-chain una respuesta a un tweet (el ancla on-chain la hizo el cliente). */
+export async function postReply(
+  parentId: string,
+  body: { platformId: string; content: string; contentHash: string; txHash: string },
+): Promise<ApiReply> {
+  return request<ApiReply>(`/posts/${encodeURIComponent(parentId)}/replies`, {
     method: "POST",
     body: JSON.stringify(body),
   });

@@ -3,6 +3,7 @@ import * as platformApi from "./platformApi";
 import { PlatformApiError } from "./platformApi";
 import { avatarColor, handleOf, loadSession } from "./session";
 import { anchorOpinion } from "../identity/post";
+import { anchorReply } from "../identity/reply";
 import type {
   AppNotification,
   Community,
@@ -31,6 +32,24 @@ function mapApiItem(item: platformApi.ApiFeedItem, ownId: string): FeedPost {
     username: item.username || item.handle,
     content: item.content,
     communityId: item.communityId ?? GENERAL_FEED_ID,
+    curationStatus: item.curation?.status ?? "approved",
+    score: 0,
+    replyCount: item.replyCount ?? 0,
+    ts: item.ts,
+    isOwn: item.platformId === ownId,
+    txHash: item.txHash,
+  };
+}
+
+/** Mapea una respuesta de la API al mismo shape de FeedPost (se renderiza con PostCard). */
+function mapReply(item: platformApi.ApiReply, ownId: string): FeedPost {
+  return {
+    id: item.id,
+    platformId: item.platformId,
+    handle: item.handle || handleOf(item.platformId),
+    username: item.username || item.handle,
+    content: item.content,
+    communityId: GENERAL_FEED_ID,
     curationStatus: item.curation?.status ?? "approved",
     score: 0,
     replyCount: 0,
@@ -167,6 +186,34 @@ export async function publishPost(input: NewPostInput): Promise<FeedPost> {
     communityId: input.communityId,
     isOwn: true,
   };
+}
+
+/** Un tweet (o respuesta) por id — el post padre de un hilo. */
+export async function fetchPost(id: string): Promise<FeedPost> {
+  const session = loadSession();
+  const item = await platformApi.getPost(id);
+  return mapApiItem(item, session.platformId);
+}
+
+/** Respuestas directas de un tweet (cronológico ascendente, como X). */
+export async function fetchReplies(parentId: string): Promise<FeedPost[]> {
+  const session = loadSession();
+  const items = await platformApi.getReplies(parentId);
+  return items.map((i) => mapReply(i, session.platformId));
+}
+
+/** Responde un tweet de forma anónima: prueba ZK (contentHash atado al parentId) + ancla
+ * on-chain con cuenta efímera + guarda off-chain. La identidad real nunca se expone. */
+export async function publishReply(input: { parentId: string; content: string }): Promise<FeedPost> {
+  const content = input.content.trim();
+  const { platformId, contentHash, txHash } = await anchorReply(input.parentId, content);
+  const item = await platformApi.postReply(input.parentId, {
+    platformId,
+    content,
+    contentHash,
+    txHash,
+  });
+  return { ...mapReply(item, platformId), isOwn: true };
 }
 
 export async function fetchPublicProfile(platformId: string): Promise<UserProfile | null> {

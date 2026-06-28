@@ -106,7 +106,9 @@ export function PostCard({ post, showVotes = false }: PostCardProps) {
           </div>
         </header>
 
-        <p className="voice-card__body">{post.content}</p>
+        <Link to={`/app/post/${post.id}`} className="voice-card__body-link">
+          <p className="voice-card__body">{post.content}</p>
+        </Link>
 
         {post.curationStatus === "flagged" && (
           <p className="voice-card__mod">En revisión por moderación</p>
@@ -122,10 +124,10 @@ export function PostCard({ post, showVotes = false }: PostCardProps) {
             <IconResuena />
             <span>Resuena{resonateTotal > 0 ? ` · ${resonateTotal}` : ""}</span>
           </button>
-          <button type="button" className="voice-card__action">
+          <Link to={`/app/post/${post.id}`} className="voice-card__action" aria-label="Responder">
             <IconResponder />
             <span>Responder{post.replyCount > 0 ? ` · ${post.replyCount}` : ""}</span>
-          </button>
+          </Link>
           {post.txHash && /^[0-9a-f]{64}$/i.test(post.txHash) ? (
             <a
               className="voice-card__action voice-card__action--icon"

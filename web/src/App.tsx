@@ -12,6 +12,7 @@ import { LandingPage } from "./pages/LandingPage";
 import { MessagesPage } from "./pages/MessagesPage";
 import { NotificationsPage } from "./pages/NotificationsPage";
 import { OnboardingPage } from "./pages/OnboardingPage";
+import { PostThreadPage } from "./pages/PostThreadPage";
 import { ProfilePage } from "./pages/ProfilePage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { SocialShell } from "./pages/SocialShell";
@@ -31,6 +32,7 @@ function App() {
         <Route path="causes/:id" element={<CampaignDetailPage />} />
         <Route path="profile" element={<ProfilePage />} />
         <Route path="u/:platformId" element={<ProfilePage />} />
+        <Route path="post/:id" element={<PostThreadPage />} />
         <Route path="compose" element={<ComposePage />} />
         <Route path="messages" element={<MessagesPage />} />
         <Route path="messages/:platformId" element={<MessagesPage />} />

@@ -60,15 +60,31 @@ interface ArticleOpinion {
   txHash: string;
   ts: number;
 }
+// Respuesta a un tweet (espejo de ArticleOpinion). `parentId` ata la respuesta a su hilo;
+// es genérico (puede apuntar a un post o a otra respuesta → anidado a futuro). El contentHash
+// on-chain incluye el parentId (la prueba ZK ata la respuesta a su padre).
+interface Reply {
+  id: string;
+  parentId: string;
+  platformId: string;
+  handle: string;
+  username: string;
+  content: string;
+  contentHash: string;
+  txHash: string;
+  curation: CurationVerdict;
+  ts: number;
+}
 interface Store {
   profiles: Record<string, Profile>;
   posts: PostItem[];
   articles: ArticleItem[];
   articleOpinions: ArticleOpinion[];
+  replies: Reply[];
 }
 
 function load(): Store {
-  const base: Store = { profiles: {}, posts: [], articles: [], articleOpinions: [] };
+  const base: Store = { profiles: {}, posts: [], articles: [], articleOpinions: [], replies: [] };
   if (!existsSync(STORE)) return base;
   return { ...base, ...(JSON.parse(readFileSync(STORE, "utf8")) as Partial<Store>) };
 }
@@ -78,6 +94,20 @@ function save(s: Store): void {
 
 /** Handle público: últimos 5 caracteres del platformId. */
 const handleOf = (platformId: string) => platformId.slice(-5);
+
+/** Curaduría Nivel 1 (solo contenido + seudónimo; nunca address). Compartida por posts y replies.
+ * Sin ANTHROPIC_API_KEY (dev/demo) se aprueba (visible); con clave, si el curador falla se escala. */
+async function curate(platformId: string, handle: string, content: string): Promise<CurationVerdict> {
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return { status: "approved", reason: "curaduría deshabilitada (dev)" };
+  }
+  try {
+    return await reviewPost({ platformId, handle, content });
+  } catch (err) {
+    console.error("[curation] no disponible:", (err as Error).message);
+    return { status: "escalated", reason: "Curador no disponible; revisión humana." };
+  }
+}
 
 const app = express();
 // Límite alto: los artículos pueden traer banner + imágenes embebidas (data URLs).
@@ -123,19 +153,7 @@ app.post("/content", async (req, res) => {
   const profile = s.profiles[platformId] ?? { username: "", handle: handleOf(platformId) };
 
   // Nivel 1 — curaduría (solo contenido + seudónimo; nunca address).
-  // Sin ANTHROPIC_API_KEY (dev/demo) la curaduría está deshabilitada → se aprueba (visible).
-  // Con clave: se evalúa; si el curador falla en ese caso, se escala a revisión humana.
-  let curation: CurationVerdict;
-  if (!process.env.ANTHROPIC_API_KEY) {
-    curation = { status: "approved", reason: "curaduría deshabilitada (dev)" };
-  } else {
-    try {
-      curation = await reviewPost({ platformId, handle: profile.handle, content });
-    } catch (err) {
-      console.error("[curation] no disponible:", (err as Error).message);
-      curation = { status: "escalated", reason: "Curador no disponible; revisión humana." };
-    }
-  }
+  const curation = await curate(platformId, profile.handle, content);
 
   const item: PostItem = {
     id: randomUUID(),
@@ -166,11 +184,84 @@ app.post("/content", async (req, res) => {
   res.json(item);
 });
 
+// Cuenta respuestas visibles (no escaladas) de un parentId.
+const replyCountOf = (s: Store, parentId: string) =>
+  s.replies.filter((r) => r.parentId === parentId && r.curation?.status !== "escalated").length;
+
 // Feed público: muestra approved + flagged. Los escalated quedan pendientes (no se publican)
-// hasta que un moderador los resuelva.
+// hasta que un moderador los resuelva. Incluye replyCount por post.
 app.get("/feed", (_req, res) => {
   const s = load();
-  res.json([...s.posts].reverse().filter((p) => p.curation?.status !== "escalated"));
+  res.json(
+    [...s.posts]
+      .reverse()
+      .filter((p) => p.curation?.status !== "escalated")
+      .map((p) => ({ ...p, replyCount: replyCountOf(s, p.id) })),
+  );
+});
+
+// Un post (o respuesta) por id — para la vista de hilo. Busca primero en posts y luego en
+// replies (así una respuesta también tiene su propio hilo: anidado a futuro).
+app.get("/posts/:id", (req, res) => {
+  const s = load();
+  const post = s.posts.find((p) => p.id === req.params.id);
+  if (post) return res.json({ ...post, replyCount: replyCountOf(s, post.id) });
+  const reply = s.replies.find((r) => r.id === req.params.id);
+  if (reply) {
+    return res.json({
+      ...reply,
+      communityId: undefined,
+      curation: reply.curation,
+      replyCount: replyCountOf(s, reply.id),
+    });
+  }
+  return res.status(404).json({ error: "not_found" });
+});
+
+// Responder un tweet: mismo flujo que un post (curaduría Nivel 1 + ancla on-chain en el cliente),
+// pero con parentId. El contentHash on-chain incluye el parentId (la prueba ata la respuesta a
+// su hilo). Sin nullifier: se puede responder varias veces con contenido distinto.
+app.post("/posts/:id/replies", async (req, res) => {
+  const s = load();
+  const parent = s.posts.find((p) => p.id === req.params.id) ?? s.replies.find((r) => r.id === req.params.id);
+  if (!parent) return res.status(404).json({ error: "parent_not_found" });
+  const platformId = String(req.body?.platformId ?? "");
+  const content = String(req.body?.content ?? "").trim().slice(0, 560);
+  const contentHash = String(req.body?.contentHash ?? "");
+  const txHash = String(req.body?.txHash ?? "");
+  if (!platformId || !content || !contentHash) return res.status(400).json({ error: "missing_fields" });
+
+  const profile = s.profiles[platformId] ?? { username: "", handle: handleOf(platformId) };
+  const curation = await curate(platformId, profile.handle, content);
+  const reply: Reply = {
+    id: randomUUID(),
+    parentId: req.params.id,
+    platformId,
+    handle: profile.handle,
+    username: profile.username,
+    content,
+    contentHash,
+    txHash,
+    curation,
+    ts: Date.now(),
+  };
+  if (curation.status === "escalated") {
+    escalateToModeration({ id: reply.id, platformId, handle: reply.handle, content, reason: curation.reason ?? "" });
+  }
+  s.replies.push(reply);
+  save(s);
+  console.log(`[reply] id=${reply.id} parent=${reply.parentId} curation=${curation.status}`);
+  res.json(reply);
+});
+
+// Respuestas de un hilo (orden cronológico ascendente, como X). Oculta las escaladas.
+app.get("/posts/:id/replies", (req, res) => {
+  const s = load();
+  res.json(
+    s.replies
+      .filter((r) => r.parentId === req.params.id && r.curation?.status !== "escalated")
+      .sort((a, b) => a.ts - b.ts),
+  );
 });
 
 // ─── Artículos (long-form) ─────────────────────────────────────────────────────

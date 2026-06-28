@@ -139,6 +139,12 @@
   flex-shrink: 0;
 }
 
+.voice-card__body-link {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+}
+
 .voice-card__body {
   margin: 0;
   padding-left: 0.35rem;
@@ -146,6 +152,10 @@
   line-height: 1.55;
   overflow-wrap: anywhere;
   white-space: pre-wrap;
+}
+
+a.voice-card__action {
+  text-decoration: none;
 }
 
 .voice-card__mod {
