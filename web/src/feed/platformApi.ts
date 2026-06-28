@@ -78,7 +78,16 @@ async function parseJson<T>(res: Response): Promise<T> {
   }
 }
 
+// Endpoints que ya devolvieron 404/501 (features sociales sin backend): se memorizan para
+// NO volver a pedirlos en cada render (evita spam de 404 en consola). Se descubren una vez.
+const knownMissing = new Set<string>();
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const method = (init?.method ?? "GET").toUpperCase();
+  const key = `${method} ${path.split("?")[0]}`;
+  if (knownMissing.has(key)) {
+    throw new PlatformApiError("endpoint_unavailable", 501, "endpoint_unavailable");
+  }
   const res = await fetch(`${BASE}${path}`, {
     ...init,
     headers: {
@@ -87,8 +96,9 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     },
   });
   if (!res.ok) {
-    // Endpoint inexistente (404) u otro error: NO parseamos el body (puede ser HTML).
-    // Extraemos el `error` solo si vino JSON; el llamador decide (isMissingEndpoint → 404/501).
+    // Endpoint inexistente (404/501): lo memorizamos para no reintentar (degrada a default).
+    if (res.status === 404 || res.status === 501) knownMissing.add(key);
+    // No parseamos el body como JSON (puede ser HTML); extraemos `error` solo si vino JSON.
     const body = await parseJson<{ error?: string }>(res);
     throw new PlatformApiError(
       typeof body.error === "string" ? body.error : `HTTP ${res.status}`,

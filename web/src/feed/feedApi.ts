@@ -23,7 +23,9 @@ function isMissingEndpoint(err: unknown): boolean {
 
 function mapApiItem(item: platformApi.ApiFeedItem, ownId: string): FeedPost {
   return {
-    id: item.id,
+    // Fallback de id estable: posts viejos del store pueden no tener `id` → evita keys
+    // duplicadas/undefined en el feed (warning de React).
+    id: item.id || `${item.platformId}:${item.ts}`,
     platformId: item.platformId,
     handle: item.handle || handleOf(item.platformId),
     username: item.username || item.handle,
@@ -74,13 +76,26 @@ export function profilePath(platformId: string): string {
   return `/app/u/${encodeURIComponent(platformId)}`;
 }
 
-export async function fetchCommunities(): Promise<Community[]> {
-  try {
-    return await platformApi.getCommunities();
-  } catch (err) {
-    if (isMissingEndpoint(err)) return [];
-    throw err;
+// Features sociales (comunidades, follow, reportes, notificaciones, mensajes, stats) NO tienen
+// backend todavía: se desactivan en el origen para no disparar 404 por ítem en cada render.
+// Cuando existan los endpoints, poner SOCIAL_ENABLED en true.
+const SOCIAL_ENABLED = false;
+
+// Cache de la promesa en vuelo: PostCard llama fetchCommunities por cada post → sin esto se
+// disparan N requests concurrentes (spam de 404 si el endpoint no existe). Memoizado = 1 sola.
+let communitiesPromise: Promise<Community[]> | null = null;
+export function fetchCommunities(): Promise<Community[]> {
+  if (!SOCIAL_ENABLED) return Promise.resolve([]);
+  if (!communitiesPromise) {
+    communitiesPromise = platformApi
+      .getCommunities()
+      .catch((err) => {
+        if (isMissingEndpoint(err)) return [];
+        communitiesPromise = null; // error real (red): permitir reintento
+        throw err;
+      });
   }
+  return communitiesPromise;
 }
 
 export async function createCommunity(input: NewCommunityInput): Promise<Community> {
@@ -169,6 +184,7 @@ export async function fetchPublicProfile(platformId: string): Promise<UserProfil
 }
 
 export async function getFollowerCount(platformId: string): Promise<number> {
+  if (!SOCIAL_ENABLED) return 0;
   try {
     const stats = await platformApi.getSocialStats(platformId);
     return stats.followers;
@@ -179,6 +195,7 @@ export async function getFollowerCount(platformId: string): Promise<number> {
 }
 
 export async function getFollowingCount(platformId: string): Promise<number> {
+  if (!SOCIAL_ENABLED) return 0;
   try {
     const stats = await platformApi.getSocialStats(platformId);
     return stats.following;
@@ -199,6 +216,7 @@ export async function unfollowUser(targetPlatformId: string): Promise<void> {
 }
 
 export async function isFollowingUser(targetPlatformId: string): Promise<boolean> {
+  if (!SOCIAL_ENABLED) return false;
   const session = loadSession();
   try {
     return await platformApi.isFollowingUser(session.platformId, targetPlatformId);
@@ -229,6 +247,7 @@ export async function reportUser(targetPlatformId: string, reason: string): Prom
 }
 
 export async function wasReported(kind: "post" | "user", targetId: string): Promise<boolean> {
+  if (!SOCIAL_ENABLED) return false;
   const session = loadSession();
   try {
     return await platformApi.hasReported(session.platformId, kind, targetId);
@@ -241,6 +260,7 @@ export async function wasReported(kind: "post" | "user", targetId: string): Prom
 export { GENERAL_FEED_ID };
 
 export async function fetchNotifications(): Promise<AppNotification[]> {
+  if (!SOCIAL_ENABLED) return [];
   const session = loadSession();
   try {
     return await platformApi.getNotifications(session.platformId);
@@ -274,6 +294,7 @@ export async function sendMessage(
 }
 
 export async function getUnreadMessagesCount(myPlatformId: string): Promise<number> {
+  if (!SOCIAL_ENABLED) return 0;
   try {
     const messages = await platformApi.getMessages(myPlatformId);
     return messages.length;
@@ -287,6 +308,7 @@ export async function fetchThread(
   myPlatformId: string,
   peerPlatformId: string,
 ): Promise<DirectMessage[]> {
+  if (!SOCIAL_ENABLED) return [];
   try {
     return await platformApi.getMessageThread(myPlatformId, peerPlatformId);
   } catch (err) {
@@ -308,6 +330,7 @@ export async function markConversationRead(
 }
 
 export async function fetchConversations(myPlatformId: string): Promise<Conversation[]> {
+  if (!SOCIAL_ENABLED) return [];
   let messages: DirectMessage[];
   try {
     messages = await platformApi.getMessages(myPlatformId);
