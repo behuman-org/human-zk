@@ -1,7 +1,5 @@
 import { NavLink, Link } from "react-router-dom";
-import { useEffect, useState } from "react";
 import { brand } from "../../content/brand";
-import { getUnreadMessagesCount, getUnreadNotificationCount } from "../../feed/feedApi";
 import { useUser } from "../../feed/UserContext";
 import { useI18n } from "../../i18n/I18nProvider";
 import { UserAvatar } from "./UserAvatar";
@@ -13,51 +11,26 @@ export function SidebarNav() {
   const n = t.social.nav;
   const causasLabel = locale === "es" ? "Causas" : "Causes";
   const articulosLabel = locale === "es" ? "Artículos" : "Articles";
-  const [unreadNotif, setUnreadNotif] = useState(0);
-  const [unreadMsg, setUnreadMsg] = useState(0);
 
+  // Notificaciones y Mensajes ocultos por ahora (no implementados todavía).
   const desktopNav = [
     { to: "/app", label: n.feed, end: true as const },
     { to: "/app/articles", label: articulosLabel, end: false as const },
     { to: "/app/causes", label: causasLabel, end: false as const },
-    { to: "/app/messages", label: n.messages, end: false as const, msgBadge: true as const },
-    { to: "/app/notifications", label: n.notifications, end: false as const, notifBadge: true as const },
     { to: "/app/settings", label: n.settings, end: false as const, desktopOnly: true as const },
   ];
 
   const mobileNav = [
     { to: "/app", label: n.feed, end: true as const },
     { to: "/app/articles", label: articulosLabel, end: false as const },
-    { to: "/app/messages", label: n.messages, end: false as const, msgBadge: true as const },
+    { to: "/app/causes", label: causasLabel, end: false as const },
     { to: "/app/compose", label: n.publish, end: false as const, compose: true as const },
     { to: "/app/profile", label: n.profile, end: false as const, profile: true as const },
   ];
 
-  // Mensajes y notificaciones aún no tienen backend (fuera de alcance): no hacemos polling
-  // para no spamear 404. Cuando existan los endpoints, se reactiva el refresh periódico.
-  useEffect(() => {
-    let cancelled = false;
-    void Promise.all([getUnreadNotificationCount(), getUnreadMessagesCount(user.platformId)])
-      .then(([notif, msg]) => {
-        if (cancelled) return;
-        setUnreadNotif(notif);
-        setUnreadMsg(msg);
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, [user.platformId]);
-
   function renderItem(item: (typeof desktopNav)[number] | (typeof mobileNav)[number]) {
     const isCompose = "compose" in item && item.compose;
     const isProfile = "profile" in item && item.profile;
-    const badgeCount =
-      "msgBadge" in item && item.msgBadge
-        ? unreadMsg
-        : "notifBadge" in item && item.notifBadge
-          ? unreadNotif
-          : 0;
 
     if (isCompose) {
       return (
@@ -96,11 +69,6 @@ export function SidebarNav() {
           }
         >
           <span className="sidebar-nav__link-text">{item.label}</span>
-          {badgeCount > 0 && (
-            <span className="sidebar-nav__badge" aria-label={`${badgeCount} ${n.unread}`}>
-              {badgeCount > 9 ? "9+" : badgeCount}
-            </span>
-          )}
         </NavLink>
       </li>
     );
