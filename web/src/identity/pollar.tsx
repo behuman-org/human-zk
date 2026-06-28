@@ -28,34 +28,84 @@ export function PollarRoot({ children }: { children: ReactNode }) {
   );
 }
 
+/** Segundos a esperar el provisioning de la wallet antes de ofrecer "continuar igual". */
+const WALLET_TIMEOUT_MS = 25_000;
+
 /**
- * Botón "Crear cuenta con email": abre el modal de Pollar (email + código). Cuando la wallet
- * queda creada (isAuthenticated), llama onReady(). NO usamos la wallet para nada más.
+ * Botón "Crear cuenta con email/Google": abre el modal de Pollar (email + código). El usuario
+ * quiere que Pollar GENERE la wallet, así que esperamos a que `walletAddress` exista (wallet
+ * realmente provisionada) y recién ahí avanzamos al KYC con onReady().
+ *
+ * Si el provisioning se cuelga (típicamente porque en el dashboard de Pollar falta fondear el
+ * funding/gas wallet o no hay assets/trustlines), tras WALLET_TIMEOUT_MS ofrecemos continuar
+ * al KYC igual: la identidad anónima NO depende de la wallet de Pollar.
+ *
  * Solo se renderiza dentro de <PollarRoot> (cuando POLLAR_ENABLED).
  */
 export function PollarEmailLogin({ onReady }: { onReady: () => void }) {
-  const { openLoginModal, isAuthenticated, verified } = usePollar();
-  const [requested, setRequested] = useState(false);
+  const { openLoginModal, isAuthenticated, verified, walletAddress } = usePollar();
+  // `started`: el usuario apretó el botón en ESTA sesión de pantalla (no auto-navegamos a quien
+  // ya tenía sesión Pollar al aterrizar en /login). `phase`: solo UI mientras se crea la wallet.
+  const [started, setStarted] = useState(false);
+  const [phase, setPhase] = useState<"idle" | "provisioning" | "timeout">("idle");
   const fired = useRef(false);
 
-  // O1: avanzamos al onboarding apenas la SESIÓN está confirmada (isAuthenticated || verified),
-  // SIN esperar a que Pollar termine de crear/provisionar la wallet (no la necesitamos para el
-  // flujo anónimo). Evita quedar trabado en el "Loading..." del provisioning de la wallet.
+  const sessionReady = isAuthenticated || verified;
+  const walletReady = typeof walletAddress === "string" && walletAddress.length > 0;
+
+  // Sesión confirmada + wallet creada → avanzar al KYC (una sola vez).
   useEffect(() => {
-    if (requested && (isAuthenticated || verified) && !fired.current) {
+    if (started && sessionReady && walletReady && !fired.current) {
       fired.current = true;
       onReady();
     }
-  }, [requested, isAuthenticated, verified, onReady]);
+  }, [started, sessionReady, walletReady, onReady]);
+
+  // Sesión lista pero wallet todavía provisionándose: mostramos estado y armamos un timeout
+  // de seguridad para no dejar al usuario atascado si el dashboard de Pollar no está fondeado.
+  useEffect(() => {
+    if (!started || !sessionReady || walletReady) return;
+    setPhase("provisioning");
+    const t = setTimeout(
+      () => setPhase((p) => (p === "provisioning" ? "timeout" : p)),
+      WALLET_TIMEOUT_MS,
+    );
+    return () => clearTimeout(t);
+  }, [started, sessionReady, walletReady]);
+
+  function start() {
+    fired.current = false;
+    setPhase("idle");
+    setStarted(true);
+    openLoginModal();
+  }
+
+  function continueAnyway() {
+    if (fired.current) return;
+    fired.current = true;
+    onReady();
+  }
+
+  if (phase === "provisioning") {
+    return <p className="auth-page__hint">Creando tu wallet con Pollar…</p>;
+  }
+
+  if (phase === "timeout") {
+    return (
+      <>
+        <p className="auth-page__hint auth-page__hint--warn">
+          La wallet está tardando más de lo normal en crearse. Podés continuar al KYC igual: tu
+          identidad anónima no depende de esa wallet.
+        </p>
+        <Button variant="secondary" onClick={continueAnyway}>
+          Continuar al KYC
+        </Button>
+      </>
+    );
+  }
 
   return (
-    <Button
-      variant="secondary"
-      onClick={() => {
-        setRequested(true);
-        openLoginModal();
-      }}
-    >
+    <Button variant="secondary" onClick={start}>
       Crear cuenta con Google o email
     </Button>
   );

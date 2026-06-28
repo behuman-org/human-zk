@@ -66,8 +66,26 @@ anonimato ZK**. Ningún hallazgo compromete los invariantes.
 
 ### Mejoras aplicadas (post-auditoría)
 
-- **O1 ✅:** la navegación al onboarding ahora dispara con `isAuthenticated || verified` —
-  apenas la sesión está confirmada, **sin esperar** el provisioning de la wallet de Pollar (no
-  se necesita para el flujo anónimo). Evita quedar trabado en el "Loading...".
+- **O1 (revisado) ✅:** decisión de producto: el usuario **sí quiere que Pollar genere la
+  wallet** antes de arrancar el KYC. Ahora `PollarEmailLogin` espera a `walletAddress` (wallet
+  realmente provisionada) y recién ahí avanza al KYC. Para no dejar a nadie atascado si el
+  provisioning se cuelga, tras 25 s ofrece **"Continuar al KYC"** igual (la identidad anónima
+  no depende de esa wallet). Reemplaza el O1 previo (navegar solo con `isAuthenticated`).
 - **O2 ✅:** se quitó el override de `appConfig`. El modal usa la **config real** del dashboard
   (métodos habilitados + estilos/logo de la app).
+
+### ⚠️ Requisito de dashboard de Pollar (causa del "Loading..." colgado)
+
+El "Loading..." infinito tras iniciar sesión **no es un bug del código**: es Pollar
+provisionando la wallet custodial. Según sus docs, la creación requiere que en el **dashboard de
+Pollar** estén configurados/fondeados:
+
+- **Funding wallet** con XLM (≈1–2.5 XLM por usuario para reservas).
+- **Gas wallet** con XLM (cubre fees de las tx de creación).
+- Al menos **un asset/trustline** en *Wallet Infrastructure → Tokens/Trustlines*.
+- **Funding Mode** = *Immediate* (*Configuration → Funding Mode*) para que la wallet quede
+  activa al login (~2 s).
+
+Sin eso, `walletAddress` nunca se puebla y el modal queda en "Loading...". Diagnóstico:
+*Dashboard → Observability → Logs*. (El flujo KYC anónimo de beHuman **no** necesita esa
+wallet; por eso ofrecemos el botón de continuar igual.)
