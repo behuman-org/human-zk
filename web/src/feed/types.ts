@@ -22,6 +22,7 @@ export interface FeedPost {
   curationStatus: CurationStatus;
   score: number;
   replyCount: number;
+  resonateCount: number;
   ts: number;
   isOwn?: boolean;
   /** Hash de la tx que ancló la opinión on-chain (opinion_board) → enlace a Stellar Expert. */

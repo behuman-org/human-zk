@@ -4,6 +4,8 @@ import { PlatformApiError } from "./platformApi";
 import { avatarColor, handleOf, loadSession } from "./session";
 import { anchorOpinion } from "../identity/post";
 import { anchorReply } from "../identity/reply";
+import { generateResonateProof, setResonatedLocally } from "../identity/resonate";
+import { loadAnyCredential } from "../kyc/credentialStore";
 import type {
   AppNotification,
   Community,
@@ -35,6 +37,7 @@ function mapApiItem(item: platformApi.ApiFeedItem, ownId: string): FeedPost {
     curationStatus: item.curation?.status ?? "approved",
     score: 0,
     replyCount: item.replyCount ?? 0,
+    resonateCount: item.resonateCount ?? 0,
     ts: item.ts,
     isOwn: item.platformId === ownId,
     txHash: item.txHash,
@@ -53,6 +56,7 @@ function mapReply(item: platformApi.ApiReply, ownId: string): FeedPost {
     curationStatus: item.curation?.status ?? "approved",
     score: 0,
     replyCount: 0,
+    resonateCount: 0,
     ts: item.ts,
     isOwn: item.platformId === ownId,
     txHash: item.txHash,
@@ -214,6 +218,27 @@ export async function publishReply(input: { parentId: string; content: string })
     txHash,
   });
   return { ...mapReply(item, platformId), isOwn: true };
+}
+
+/** Resuena un post de forma anónima: prueba ZK (nullifier por post) → cuenta pública en el server.
+ * Devuelve la cuenta actualizada. El nullifier nunca se expone; el server solo lo dedup-ea. */
+export async function resonatePost(postId: string): Promise<number> {
+  const cred = loadAnyCredential();
+  if (!cred) throw new Error("necesitas_verificarte");
+  const p = await generateResonateProof(cred, postId);
+  const { count } = await platformApi.resonate(postId, { proof: p.proof, publicSignals: p.publicSignals });
+  setResonatedLocally(postId, true);
+  return count;
+}
+
+/** Quita tu Resuena (regenera la prueba → mismo nullifier → baja autorizada). */
+export async function unresonatePost(postId: string): Promise<number> {
+  const cred = loadAnyCredential();
+  if (!cred) throw new Error("necesitas_verificarte");
+  const p = await generateResonateProof(cred, postId);
+  const { count } = await platformApi.unresonate(postId, { proof: p.proof, publicSignals: p.publicSignals });
+  setResonatedLocally(postId, false);
+  return count;
 }
 
 export async function fetchPublicProfile(platformId: string): Promise<UserProfile | null> {
