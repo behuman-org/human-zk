@@ -172,7 +172,8 @@ app.post(
   },
 );
 
-const port = Number(process.env.MATCHER_PORT ?? 8787);
+// Render (y otros PaaS) asignan el puerto vía $PORT; en local usamos MATCHER_PORT.
+const port = Number(process.env.PORT ?? process.env.MATCHER_PORT ?? 8787);
 // Solo levantar el server si se ejecuta directamente (no al importarlo en tests).
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   app.listen(port, () => {

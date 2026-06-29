@@ -8,6 +8,7 @@
   "scripts": {
     "dev": "tsx watch matcher/server.ts",
     "serve": "tsx matcher/server.ts",
+    "start": "tsx matcher/server.ts",
     "download-models": "bash matcher/scripts/download-models.sh",
     "build": "tsc -p tsconfig.json",
     "test": "vitest run"
