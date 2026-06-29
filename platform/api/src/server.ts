@@ -17,10 +17,23 @@ import {
   resolveModeration,
   reviewPost,
 } from "@behuman/curation";
+import { strToField, verifyFundingOpinionProof } from "@behuman/sdk";
 
 const here = dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: resolve(here, "..", "..", "..", ".env") });
 const STORE = process.env.PLATFORM_STORE ?? resolve(here, "..", ".platform-store.json");
+
+// VK del circuito que reusa el "Resuena" (funding_opinion: scope + nullifier por post).
+const RESONATE_VK = resolve(here, "..", "..", "..", "funding", "circuits", "build", "verification_key.json");
+// Prefijos de dominio del Resuena. DEBEN coincidir con web/src/identity/resonate.ts.
+const RES_SCOPE_PREFIX = "resonate-id:";
+const RES_NULLSCOPE_PREFIX = "resonate-null:";
+const RES_CONTENT_PREFIX = "resonate-content:";
+// Índices de public signals del circuito: [issuerRoot, platformId, nullifier, scope, nullScope, contentHash].
+const RES_NULLIFIER = 2;
+const RES_SCOPE = 3;
+const RES_NULLSCOPE = 4;
+const RES_CONTENT = 5;
 
 interface Profile {
   username: string;
@@ -65,10 +78,13 @@ interface Store {
   posts: PostItem[];
   articles: ArticleItem[];
   articleOpinions: ArticleOpinion[];
+  // "Resuena": por cada postId, el SET de nullifiers (1 humano = 1 resuena por post). Guardamos
+  // SOLO el nullifier (no platformId ni identidad): cuenta pública, autor anónimo.
+  resonates: Record<string, string[]>;
 }
 
 function load(): Store {
-  const base: Store = { profiles: {}, posts: [], articles: [], articleOpinions: [] };
+  const base: Store = { profiles: {}, posts: [], articles: [], articleOpinions: [], resonates: {} };
   if (!existsSync(STORE)) return base;
   return { ...base, ...(JSON.parse(readFileSync(STORE, "utf8")) as Partial<Store>) };
 }
@@ -166,11 +182,72 @@ app.post("/content", async (req, res) => {
   res.json(item);
 });
 
+const resonateCountOf = (s: Store, postId: string) => (s.resonates[postId] ?? []).length;
+
 // Feed público: muestra approved + flagged. Los escalated quedan pendientes (no se publican)
-// hasta que un moderador los resuelva.
+// hasta que un moderador los resuelva. Incluye la cuenta pública de Resuena por post.
 app.get("/feed", (_req, res) => {
   const s = load();
-  res.json([...s.posts].reverse().filter((p) => p.curation?.status !== "escalated"));
+  res.json(
+    [...s.posts]
+      .reverse()
+      .filter((p) => p.curation?.status !== "escalated")
+      .map((p) => ({ ...p, resonateCount: resonateCountOf(s, p.id) })),
+  );
+});
+
+// ─── "Resuena" (reacción anónima por nullifier) ───────────────────────────────
+// Verifica la prueba ZK (personhood + nullifier scopeado al post), la ata a ESTE post, y
+// guarda SOLO el nullifier. 1 humano = 1 resuena por post (anti-Sybil). Cero identidad.
+interface ResonateBody {
+  proof?: unknown;
+  publicSignals?: string[];
+}
+
+let resonateVk: unknown | null = null;
+function loadResonateVk(): unknown | null {
+  if (resonateVk) return resonateVk;
+  if (!existsSync(RESONATE_VK)) return null;
+  resonateVk = JSON.parse(readFileSync(RESONATE_VK, "utf8"));
+  return resonateVk;
+}
+
+/** Verifica la prueba + binding al post; devuelve el nullifier de confianza, o null si inválida. */
+async function verifyResonate(postId: string, body: ResonateBody): Promise<string | null> {
+  const ps = body.publicSignals;
+  if (!body.proof || !Array.isArray(ps) || ps.length !== 6) return null;
+  // Binding: scope/nullScope/contentHash de la prueba deben derivar de ESTE post.
+  if (ps[RES_SCOPE] !== strToField(RES_SCOPE_PREFIX + postId)) return null;
+  if (ps[RES_NULLSCOPE] !== strToField(RES_NULLSCOPE_PREFIX + postId)) return null;
+  if (ps[RES_CONTENT] !== strToField(RES_CONTENT_PREFIX + postId)) return null;
+  const vk = loadResonateVk();
+  if (!vk) return null;
+  const ok = await verifyFundingOpinionProof({ proof: body.proof, publicSignals: ps } as never, vk);
+  return ok ? ps[RES_NULLIFIER] : null;
+}
+
+app.post("/posts/:id/resonate", async (req, res) => {
+  const postId = req.params.id;
+  const nullifier = await verifyResonate(postId, req.body ?? {});
+  if (!nullifier) return res.status(403).json({ error: "invalid_proof" });
+  const s = load();
+  const set = new Set(s.resonates[postId] ?? []);
+  set.add(nullifier); // idempotente: el mismo humano no suma dos veces
+  s.resonates[postId] = [...set];
+  save(s);
+  res.json({ count: set.size });
+});
+
+app.post("/posts/:id/unresonate", async (req, res) => {
+  const postId = req.params.id;
+  const nullifier = await verifyResonate(postId, req.body ?? {});
+  if (!nullifier) return res.status(403).json({ error: "invalid_proof" });
+  const s = load();
+  const set = new Set(s.resonates[postId] ?? []);
+  set.delete(nullifier);
+  s.resonates[postId] = [...set];
+  save(s);
+  res.json({ count: set.size });
 });
 
 // ─── Artículos (long-form) ─────────────────────────────────────────────────────

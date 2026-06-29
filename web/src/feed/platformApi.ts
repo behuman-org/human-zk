@@ -17,6 +17,12 @@ export interface ApiFeedItem {
   curation: { status: CurationStatus; reason?: string };
   ts: number;
   communityId?: string;
+  resonateCount?: number;
+}
+
+export interface ResonateProofInput {
+  proof: unknown;
+  publicSignals: string[];
 }
 
 export interface ApiProfile {
@@ -152,6 +158,22 @@ export async function postContent(body: {
   communityId?: string;
 }): Promise<ApiFeedItem> {
   return request<ApiFeedItem>("/content", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+/** Resuena (reacción anónima): suma el nullifier de la prueba al post. Devuelve la cuenta pública. */
+export async function resonate(postId: string, body: ResonateProofInput): Promise<{ count: number }> {
+  return request<{ count: number }>(`/posts/${encodeURIComponent(postId)}/resonate`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+/** Quita tu Resuena (mismo nullifier vía nueva prueba). Devuelve la cuenta pública. */
+export async function unresonate(postId: string, body: ResonateProofInput): Promise<{ count: number }> {
+  return request<{ count: number }>(`/posts/${encodeURIComponent(postId)}/unresonate`, {
     method: "POST",
     body: JSON.stringify(body),
   });

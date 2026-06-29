@@ -1,7 +1,16 @@
 import { useEffect, useState, type CSSProperties } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import type { Community, FeedPost } from "../../feed/types";
-import { displayName, fetchCommunities, findCommunity, formatTimeAgo, profilePath } from "../../feed/feedApi";
+import {
+  displayName,
+  fetchCommunities,
+  findCommunity,
+  formatTimeAgo,
+  profilePath,
+  resonatePost,
+  unresonatePost,
+} from "../../feed/feedApi";
+import { isResonatedLocally } from "../../identity/resonate";
 import { useI18n } from "../../i18n/I18nProvider";
 import { CommunityChip } from "./CommunityChip";
 import { IconContrato, IconResponder, IconResuena, IconVoto } from "./FeedIcons";
@@ -17,9 +26,11 @@ interface PostCardProps {
 
 export function PostCard({ post, showVotes = false }: PostCardProps) {
   const { locale } = useI18n();
+  const navigate = useNavigate();
   const [score, setScore] = useState(post.score);
-  const [resonates, setResonates] = useState(0);
-  const [didResonate, setDidResonate] = useState(false);
+  const [resonateCount, setResonateCount] = useState(post.resonateCount);
+  const [didResonate, setDidResonate] = useState(() => isResonatedLocally(post.id));
+  const [resonating, setResonating] = useState(false);
   const [vote, setVote] = useState<"up" | "down" | null>(null);
   const [community, setCommunity] = useState<Community | undefined>();
 
@@ -45,19 +56,27 @@ export function PostCard({ post, showVotes = false }: PostCardProps) {
     setScore((s) => s + (dir === "up" ? 1 : -1));
   }
 
-  function toggleResonate() {
-    setDidResonate((was) => {
-      setResonates((n) => (was ? n - 1 : n + 1));
-      return !was;
-    });
+  // Resuena: reacción ANÓNIMA (prueba ZK con nullifier por post). El server cuenta nullifiers
+  // únicos → cuenta pública sin saber quién. Genera una prueba en cada toggle (acción deliberada).
+  async function toggleResonate() {
+    if (resonating) return;
+    setResonating(true);
+    try {
+      const count = didResonate ? await unresonatePost(post.id) : await resonatePost(post.id);
+      setDidResonate((was) => !was);
+      setResonateCount(count);
+    } catch (e) {
+      // Si todavía no se verificó como humano, lo mandamos al onboarding.
+      if ((e as Error).message === "necesitas_verificarte") navigate("/onboarding");
+    } finally {
+      setResonating(false);
+    }
   }
 
   const avatarUser = {
     username: post.username || post.handle,
     avatarIndex: post.platformId.charCodeAt(0) % 6,
   };
-
-  const resonateTotal = (score > 0 ? score : 0) + resonates;
 
   return (
     <article
@@ -118,9 +137,11 @@ export function PostCard({ post, showVotes = false }: PostCardProps) {
             className={`voice-card__action ${didResonate ? "is-on" : ""}`}
             aria-pressed={didResonate}
             onClick={toggleResonate}
+            disabled={resonating}
+            title={didResonate ? "Quitar tu Resuena (anónimo)" : "Resuena de forma anónima"}
           >
             <IconResuena />
-            <span>Resuena{resonateTotal > 0 ? ` · ${resonateTotal}` : ""}</span>
+            <span>{resonating ? "…" : `Resuena${resonateCount > 0 ? ` · ${resonateCount}` : ""}`}</span>
           </button>
           <button type="button" className="voice-card__action">
             <IconResponder />
