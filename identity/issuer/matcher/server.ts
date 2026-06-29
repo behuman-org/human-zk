@@ -176,6 +176,16 @@ app.post(
 const port = Number(process.env.PORT ?? process.env.MATCHER_PORT ?? 8787);
 // Solo levantar el server si se ejecuta directamente (no al importarlo en tests).
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  // Red de seguridad: el decoder nativo de tfjs-node puede emitir errores
+  // (p. ej. "Error attempting to read image" ante un upload malformado) FUERA
+  // del try/catch de la ruta, lo que tumbaría toda la instancia (única en free).
+  // Los logueamos PII-free y mantenemos el proceso vivo.
+  process.on("uncaughtException", (err) => {
+    console.error("[uncaughtException]", (err as Error).message);
+  });
+  process.on("unhandledRejection", (reason) => {
+    console.error("[unhandledRejection]", reason instanceof Error ? reason.message : String(reason));
+  });
   app.listen(port, () => {
     console.log(`beHuman matcher escuchando en :${port} (provider=${getProvider().kind})`);
   });
