@@ -42,6 +42,12 @@ function minTokens(): number {
   return Number.isFinite(v) && v > 0 ? v : 15;
 }
 
+// OCR (tesseract) es opcional: solo aporta el chequeo heurístico de "es un documento" y el
+// cotejo anti-fraude de datos declarados (testnet, no valida autenticidad). Cargarlo junto a
+// tfjs no entra en instancias de 512MB (OOM). Con OCR_ENABLED=false el KYC sigue funcionando
+// por el match facial DNI↔selfie + liveness (el núcleo de prueba de persona).
+const OCR_ENABLED = process.env.OCR_ENABLED !== "false";
+
 let workerP: Promise<Worker> | null = null;
 async function getWorker(): Promise<Worker> {
   if (!workerP) workerP = createWorker("spa");
@@ -70,6 +76,11 @@ async function analyze(image: Buffer): Promise<DocAnalysis> {
   // dos veces; clave para no quedarnos sin memoria en instancias chicas).
   const small = await fitImage(image);
   const hasFace = !!(await detectFace(small));
+
+  // Sin OCR devolvemos solo la señal de cara (el resto neutro); los validadores lo contemplan.
+  if (!OCR_ENABLED) {
+    return { hasFace, text: "", tokens: 0, keywordsFound: 0, hasDocNumber: false, docNumbers: [], years: [] };
+  }
 
   const worker = await getWorker();
   const { data } = await worker.recognize(small);
@@ -110,9 +121,11 @@ export async function validateDocument(image: Buffer): Promise<DocumentCheck> {
   const a = await analyze(image);
   const reasons: string[] = [];
   if (!a.hasFace) reasons.push("no_face_in_document");
-  if (!looksLikeDocument(a)) reasons.push("not_an_id_document");
+  // Sin OCR no podemos validar el "tipo de documento": basta con que haya una cara.
+  const docLike = OCR_ENABLED ? looksLikeDocument(a) : true;
+  if (!docLike) reasons.push("not_an_id_document");
   return {
-    ok: a.hasFace && looksLikeDocument(a),
+    ok: a.hasFace && docLike,
     reasons,
     hasFace: a.hasFace,
     keywordsFound: a.keywordsFound,
@@ -176,8 +189,23 @@ export async function validateDocumentData(image: Buffer, declared: DeclaredData
   const a = await analyze(image);
   const reasons: string[] = [];
   if (!a.hasFace) reasons.push("no_face_in_document");
-  if (!looksLikeDocument(a)) reasons.push("not_an_id_document");
-  const docValid = a.hasFace && looksLikeDocument(a);
+  const docLike = OCR_ENABLED ? looksLikeDocument(a) : true;
+  if (!docLike) reasons.push("not_an_id_document");
+  const docValid = a.hasFace && docLike;
+
+  // Sin OCR no hay cotejo anti-fraude: aceptamos los datos declarados (solo importa la cara).
+  if (!OCR_ENABLED) {
+    return {
+      ok: docValid,
+      reasons,
+      hasFace: a.hasFace,
+      keywordsFound: a.keywordsFound,
+      tokens: a.tokens,
+      hasDocNumber: a.hasDocNumber,
+      dataOk: true,
+      mismatches: [],
+    };
+  }
 
   const cross = crossCheckData(a, declared);
   // Si ni siquiera pudimos leer nº de documento ni años, no se puede cotejar → DNI ilegible.
