@@ -42,30 +42,42 @@ function contract() {
 }
 
 async function invoke(address: string, op: StellarSdk.xdr.Operation): Promise<string> {
-  const account = await rpc.getAccount(address);
-  let tx = new TransactionBuilder(account, { fee: BASE_FEE, networkPassphrase: NETWORK_PASSPHRASE })
-    .addOperation(op)
-    .setTimeout(120)
-    .build();
+  // init + verify_and_register se firman seguidas desde la misma wallet. El RPC de Soroban
+  // tiene consistencia eventual: tras confirmar la primera, getAccount puede devolver la
+  // secuencia vieja → `txBadSeq`. Reintentamos refrescando la cuenta con una espera breve.
+  for (let attempt = 0; ; attempt++) {
+    const account = await rpc.getAccount(address);
+    let tx = new TransactionBuilder(account, { fee: BASE_FEE, networkPassphrase: NETWORK_PASSPHRASE })
+      .addOperation(op)
+      .setTimeout(120)
+      .build();
 
-  const sim = await rpc.simulateTransaction(tx);
-  if (StellarSdk.rpc.Api.isSimulationError(sim)) {
-    throw parseContractError(sim.error) ?? new Error(sim.error);
+    const sim = await rpc.simulateTransaction(tx);
+    if (StellarSdk.rpc.Api.isSimulationError(sim)) {
+      throw parseContractError(sim.error) ?? new Error(sim.error);
+    }
+    tx = StellarSdk.rpc.assembleTransaction(tx, sim).build();
+
+    const signed = await signXdr(tx.toXDR(), NETWORK_PASSPHRASE);
+    const stx = TransactionBuilder.fromXDR(signed, NETWORK_PASSPHRASE) as StellarSdk.Transaction;
+    const sent = await rpc.sendTransaction(stx);
+    if (sent.status === "ERROR") {
+      const isBadSeq = JSON.stringify(sent.errorResult ?? "").includes("txBadSeq");
+      if (isBadSeq && attempt < 6) {
+        await sleep(1500);
+        continue;
+      }
+      throw new Error(`sendTransaction: ${JSON.stringify(sent.errorResult)}`);
+    }
+
+    let res = await rpc.getTransaction(sent.hash);
+    for (let i = 0; i < 30 && res.status === "NOT_FOUND"; i++) {
+      await sleep(1000);
+      res = await rpc.getTransaction(sent.hash);
+    }
+    if (res.status !== "SUCCESS") throw new Error(`tx ${sent.hash}: ${res.status}`);
+    return sent.hash;
   }
-  tx = StellarSdk.rpc.assembleTransaction(tx, sim).build();
-
-  const signed = await signXdr(tx.toXDR(), NETWORK_PASSPHRASE);
-  const stx = TransactionBuilder.fromXDR(signed, NETWORK_PASSPHRASE) as StellarSdk.Transaction;
-  const sent = await rpc.sendTransaction(stx);
-  if (sent.status === "ERROR") throw new Error(`sendTransaction: ${JSON.stringify(sent.errorResult)}`);
-
-  let res = await rpc.getTransaction(sent.hash);
-  for (let i = 0; i < 30 && res.status === "NOT_FOUND"; i++) {
-    await sleep(1000);
-    res = await rpc.getTransaction(sent.hash);
-  }
-  if (res.status !== "SUCCESS") throw new Error(`tx ${sent.hash}: ${res.status}`);
-  return sent.hash;
 }
 
 interface SnarkVK {

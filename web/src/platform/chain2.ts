@@ -39,24 +39,37 @@ function contract() {
 }
 
 async function invoke(kp: StellarSdk.Keypair, op: StellarSdk.xdr.Operation): Promise<string> {
-  const account = await rpc.getAccount(kp.publicKey());
-  let tx = new TransactionBuilder(account, { fee: BASE_FEE, networkPassphrase: NETWORK_PASSPHRASE })
-    .addOperation(op)
-    .setTimeout(120)
-    .build();
-  const sim = await rpc.simulateTransaction(tx);
-  if (StellarSdk.rpc.Api.isSimulationError(sim)) throw parseErr(sim.error) ?? new Error(sim.error);
-  tx = StellarSdk.rpc.assembleTransaction(tx, sim).build();
-  tx.sign(kp); // firma local con la cuenta efímera (sin wallet)
-  const sent = await rpc.sendTransaction(tx);
-  if (sent.status === "ERROR") throw new Error(`sendTransaction: ${JSON.stringify(sent.errorResult)}`);
-  let res = await rpc.getTransaction(sent.hash);
-  for (let i = 0; i < 30 && res.status === "NOT_FOUND"; i++) {
-    await sleep(1000);
-    res = await rpc.getTransaction(sent.hash);
+  // Las publicaciones encadenan varias tx desde la MISMA cuenta efímera (init → register →
+  // post). El RPC de Soroban tiene consistencia eventual: tras confirmar una tx, el siguiente
+  // getAccount puede devolver la secuencia vieja → `txBadSeq`. Reintentamos refrescando la
+  // cuenta (con una espera breve) hasta que la secuencia se actualice.
+  for (let attempt = 0; ; attempt++) {
+    const account = await rpc.getAccount(kp.publicKey());
+    let tx = new TransactionBuilder(account, { fee: BASE_FEE, networkPassphrase: NETWORK_PASSPHRASE })
+      .addOperation(op)
+      .setTimeout(120)
+      .build();
+    const sim = await rpc.simulateTransaction(tx);
+    if (StellarSdk.rpc.Api.isSimulationError(sim)) throw parseErr(sim.error) ?? new Error(sim.error);
+    tx = StellarSdk.rpc.assembleTransaction(tx, sim).build();
+    tx.sign(kp); // firma local con la cuenta efímera (sin wallet)
+    const sent = await rpc.sendTransaction(tx);
+    if (sent.status === "ERROR") {
+      const isBadSeq = JSON.stringify(sent.errorResult ?? "").includes("txBadSeq");
+      if (isBadSeq && attempt < 6) {
+        await sleep(1500); // dar tiempo a que el RPC actualice la secuencia y reintentar
+        continue;
+      }
+      throw new Error(`sendTransaction: ${JSON.stringify(sent.errorResult)}`);
+    }
+    let res = await rpc.getTransaction(sent.hash);
+    for (let i = 0; i < 30 && res.status === "NOT_FOUND"; i++) {
+      await sleep(1000);
+      res = await rpc.getTransaction(sent.hash);
+    }
+    if (res.status !== "SUCCESS") throw new Error(`tx ${sent.hash}: ${res.status}`);
+    return sent.hash;
   }
-  if (res.status !== "SUCCESS") throw new Error(`tx ${sent.hash}: ${res.status}`);
-  return sent.hash;
 }
 
 const proofVal = (p: PlatformProof) => {
