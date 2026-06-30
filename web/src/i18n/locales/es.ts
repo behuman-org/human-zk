@@ -64,7 +64,7 @@ export const es: SiteMessages = {
   },
   kycFlow: {
     label: "Tu recorrido",
-    title: "Cómo entrás a beHuman",
+    title: "Cómo entrás a human",
     lead:
       "El proceso está diseñado para ser claro y privado. La mayor parte ocurre en tu dispositivo; no necesitás repetirlo en cada publicación.",
     steps: [
