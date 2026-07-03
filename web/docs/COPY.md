@@ -1,6 +1,6 @@
 # Copy de la landing — beHuman
 
-Texto centralizado en `src/content/site.ts`. Alineado a `README.md`, `CLAUDE.md` y la vault Obsidian (`obsidian-vault-zk`).
+Texto centralizado en `src/i18n/locales/{es,en}.ts`. Alineado a `README.md`, `CLAUDE.md` y la vault Obsidian (`obsidian-vault-zk`).
 
 ## Secciones
 
@@ -17,10 +17,10 @@ Texto centralizado en `src/content/site.ts`. Alineado a `README.md`, `CLAUDE.md`
 ## Disclaimers obligatorios
 
 - **Issuer mock** — declarado en hero flow paso 01 y footer
-- **Scaffolding** - producto en desarrollo (hackathon / behuman-org)
+- **Stellar Hacks: Real-World ZK** — enlace en footer y disclaimer de auth (`siteMeta.hackathon`)
 
 ## Editar copy
 
-1. Modificar `src/content/site.ts`
+1. Modificar `src/i18n/locales/es.ts` y `en.ts`
 2. Actualizar este archivo si cambia estructura de secciones
 3. Correr `npm run test --workspace @behuman/web` si cambian textos usados en tests

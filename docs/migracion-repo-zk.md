@@ -6,7 +6,7 @@
 |------|-------|
 | Carpeta local | `beHuman/` |
 | Remote git | **`git@github.com:behuman-org/human-zk.git`** |
-| Repo anterior | `behuman-org/human` (Pulso) — superseded |
+| Repo anterior | `behuman-org/human` — archivado; superseded por `human-zk` |
 | Rama de trabajo | `fix/security-audit-hardening` |
 | Hackathon | **Stellar Hacks: Real-World ZK** |
 

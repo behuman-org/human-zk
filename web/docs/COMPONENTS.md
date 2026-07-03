@@ -10,7 +10,7 @@ Barra flotante pill con glassmorphism. Links ancla: `#capas`, `#como-funciona`, 
 
 ### `SiteFooter`
 
-Marca, tagline (behuman-org, hackathon, disclaimer issuer mock), enlaces GitHub y path a docs.
+Marca, tagline (behuman-org, **Stellar Hacks: Real-World ZK**, disclaimer issuer mock), enlaces GitHub + DoraHacks.
 
 ## Hero
 
@@ -20,7 +20,7 @@ Canvas + dot-grid. No recibe props. Respeta reduced motion internamente.
 
 ### `HeroSection`
 
-Compone `HeroBackground`, badge, título, lead, CTAs y marquee del stack. Copy desde `content/site.ts`.
+Compone `HeroBackground`, badge, título, lead, CTAs y marquee del stack. Copy desde i18n (`locales/es.ts`, `locales/en.ts`).
 
 ## Secciones
 
@@ -51,7 +51,7 @@ Grid 2×2 / 4 columnas con métricas placeholder.
 
 ## Contenido
 
-Ver `src/content/site.ts` y [COPY.md](./COPY.md).
+Ver `src/i18n/locales/` y [COPY.md](./COPY.md).
 
 ## UI
 

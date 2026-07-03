@@ -38,7 +38,7 @@ PII va al matcher mock (HTTPS); no se persiste. Secret ZK cifrado en localStorag
 
 **Fecha:** 2026-06-24
 
-Copy centralizado en `src/content/site.ts`, secciones landing (capas, plataforma, curaduría).
+Copy centralizado en `src/i18n/locales/`, secciones landing (capas, plataforma, curaduría).
 
 ---
 

@@ -42,6 +42,8 @@ export interface SiteMessages {
     name: string;
     projectName: string;
     org: string;
+    hackathon: string;
+    hackathonUrl: string;
     tagline: string;
     description: string;
     htmlTitle: string;

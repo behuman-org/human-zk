@@ -31,4 +31,4 @@ del producto viven en la **vault de Obsidian**, en el repo hermano `obsidian-vau
 | Doc | Para qué |
 |-----|----------|
 | [`hackathon-real-world-zk.md`](./hackathon-real-world-zk.md) | Checklist y pitch para **Stellar Hacks: Real-World ZK** |
-| [`migracion-repo-zk.md`](./migracion-repo-zk.md) | Cómo pasar de Pulso / `ACRC-Zk/beHuman` a repo nuevo |
+| [`migracion-repo-zk.md`](./migracion-repo-zk.md) | Migración a `behuman-org/human-zk` (Real-World ZK) |

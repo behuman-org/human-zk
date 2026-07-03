@@ -4,8 +4,7 @@
 > Repo: **[github.com/behuman-org/human-zk](https://github.com/behuman-org/human-zk)**  
 > Enfoque: **identity proofs** — proof of personhood con ZK verificado on-chain en Soroban.
 
-Anteriormente el proyecto se presentó en **Stellar PULSO Hackathon**. Esta guía es para la
-entrega **ZK Real-World** (repo nuevo o rama limpia + README honesto).
+Guía de presentación para la hackathon **ZK Real-World** (`human-zk` + README honesto).
 
 ---
 
@@ -57,7 +56,7 @@ Actualizar tras cada redeploy. Ver `identity/AGENTS.md` y `docs/capa-2-plataform
 
 ## Checklist pre-submit (DoraHacks)
 
-- [ ] Repo público con README actualizado (hackathon ZK, no Pulso)
+- [ ] Repo público con README actualizado para **Stellar Hacks: Real-World ZK**
 - [ ] Video demo subido (YouTube/Loom) — link en README
 - [ ] `.env.example` completo; sin secretos en el repo
 - [ ] `web/public/circuits/*` commiteados o script de build documentado

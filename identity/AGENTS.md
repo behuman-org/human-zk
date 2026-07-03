@@ -155,8 +155,8 @@ Tests puros del matcher: `npx vitest run --root identity/issuer identity/issuer/
 
 ## 6. Cómo pushear a main (workflow del equipo)
 
-- El repo canónico es **[behuman-org/human-zk](https://github.com/behuman-org/human-zk)** (antes
-  `ACRC-Zk/beHuman` / `behuman-org/human`). Se trabaja **directo sobre
+- El repo canónico es **[behuman-org/human-zk](https://github.com/behuman-org/human-zk)** — entrega
+  **Stellar Hacks: Real-World ZK**. Se trabaja **directo sobre
   `main`** con autorización del owner (sus credenciales de GitHub). Hacé commits convencionales
   (`feat:`, `fix:`, `chore:`…). Los agentes cierran el mensaje con
   `Co-Authored-By: Claude <noreply@anthropic.com>`.

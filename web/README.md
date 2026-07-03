@@ -2,6 +2,8 @@
 
 La app de beHuman: **landing** (onboarding del producto) + **flujos en vivo** de Capas 1–3.
 
+Entrega hackathon: **[Stellar Hacks: Real-World ZK](https://dorahacks.io/hackathon/stellar-hacks-zk/detail)**.
+
 > 📐 Diseño landing: inspiración [zk.me](https://www.zk.me/) — ver **`web/docs/DESIGN.md`**
 > 📐 Flujo KYC en vault: `Flujo de KYC` · `Spec — Matcher DNI + Selfie (Capa 1)`
 
@@ -38,7 +40,7 @@ web/
 ├── index.html
 ├── vite.config.ts
 └── src/
-    ├── content/          # copy centralizado (site.ts)
+    ├── i18n/               # copy centralizado (locales es/en)
     ├── components/
     ├── hooks/
     ├── kyc/              # gate Capa 1 (consent → DNI → cara → ZK → on-chain)

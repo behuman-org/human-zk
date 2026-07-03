@@ -2,6 +2,9 @@
 
 > Leé esto antes de tocar el código. Este archivo encapsula el contexto que vive en la
 > **vault de Obsidian** (repo hermano `obsidian-vault-zk`, en `../obsidian-vault-zk/`).
+>
+> Repo: **[behuman-org/human-zk](https://github.com/behuman-org/human-zk)** · Hackathon:
+> **[Stellar Hacks: Real-World ZK](https://dorahacks.io/hackathon/stellar-hacks-zk/detail)**.
 
 ## Qué es beHuman
 

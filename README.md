@@ -2,6 +2,8 @@
 
 > **KYC con Zero-Knowledge sobre Stellar** — *proof of personhood*: probás que sos una
 > persona real y **única** sin revelar quién sos. Monorepo del producto.
+>
+> Presentado en **[Stellar Hacks: Real-World ZK](https://dorahacks.io/hackathon/stellar-hacks-zk/detail)** — identity proofs verificados on-chain en Soroban.
 
 human tiene **tres capas**: **identidad** (KYC-ZK), **plataforma de opinión** verificada y
 **funding** ZK (crowdfunding anónimo). Una persona verifica su identidad una vez

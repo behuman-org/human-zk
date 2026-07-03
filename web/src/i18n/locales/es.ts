@@ -5,13 +5,15 @@ export const es: SiteMessages = {
     name: "human",
     projectName: "beHuman",
     org: "behuman-org",
+    hackathon: "Stellar Hacks: Real-World ZK",
+    hackathonUrl: "https://dorahacks.io/hackathon/stellar-hacks-zk/detail",
     tagline: "Tu opinión, sin exponer quién sos",
     description:
       "Verificá tu identidad una vez y participá en un espacio para opinar con privacidad.",
     htmlTitle: "human · Tu opinión, sin exponer quién sos",
   },
   hero: {
-    badge: "Opinión con privacidad",
+    badge: "ZK · proof of personhood",
     title: "Tu opinión importa.",
     accent: "Una sola vez. Sin dar tu nombre.",
     lead:
@@ -169,7 +171,13 @@ export const es: SiteMessages = {
       { label: "Plataforma", href: "#plataforma" },
       { label: "Calidad", href: "#curacion" },
     ],
-    external: [{ label: "GitHub", href: "https://github.com/behuman-org/human-zk" }],
+    external: [
+      { label: "GitHub", href: "https://github.com/behuman-org/human-zk" },
+      {
+        label: "Stellar Hacks: Real-World ZK",
+        href: "https://dorahacks.io/hackathon/stellar-hacks-zk/detail",
+      },
+    ],
     legalPrefix: "©",
     legalSuffix: "human.",
   },
@@ -223,7 +231,7 @@ export const es: SiteMessages = {
     ],
     startVerification: "Comenzar verificación",
     legal:
-      "Al continuar aceptás nuestros términos de uso y política de privacidad. Issuer mock en demo — no sustituye KYC regulado.",
+      "Al continuar aceptás nuestros términos de uso y política de privacidad. Proyecto demo para Stellar Hacks: Real-World ZK — issuer mock, no sustituye KYC regulado.",
     brandPanelLabel: "beHuman",
     brandTitle: "Una persona real.",
     brandTitleAccent: "Una sola vez.",
