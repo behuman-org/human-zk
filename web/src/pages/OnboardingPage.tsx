@@ -24,8 +24,8 @@ export function OnboardingPage() {
         </div>
         {mode === "credential" && (
           <p className="bh-note" style={{ marginBottom: "0.75rem" }}>
-            Tu email creó tu wallet con Pollar, pero <strong>nunca se vincula a tu identidad
-            anónima</strong>: el resto pasa solo en tu dispositivo.
+            Tu email creó tu wallet con Pollar. Tras validar tu identidad, registramos la prueba ZK
+            on-chain con esa wallet (sin vincular tu identidad anónima al email).
           </p>
         )}
         <KycFlow

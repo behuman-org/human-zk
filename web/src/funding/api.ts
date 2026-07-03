@@ -1,8 +1,9 @@
 // Cliente del backend de Funding ZK (CAPA 3). Campañas, donación anónima, posición
 // (yield), hitos, release 2-de-3, refund todo-o-nada y opiniones por campaña.
 import type { Campaign, CampaignOpinion, Sentiment } from "@behuman/shared";
+import { requireEnv } from "../lib/envGuard";
 
-const BASE = import.meta.env.VITE_FUNDING_API_URL ?? "http://localhost:8789";
+const BASE = requireEnv("VITE_FUNDING_API_URL", "http://localhost:8789");
 
 async function json<T>(res: Response): Promise<T> {
   if (!res.ok) {

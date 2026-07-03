@@ -7,7 +7,10 @@ interface ImportMetaEnv {
   readonly VITE_KYC_VERIFIER_CONTRACT_ID?: string;
   readonly VITE_OPINION_BOARD_CONTRACT_ID?: string;
   readonly VITE_PLATFORM_API_URL?: string;
+  readonly VITE_FUNDING_API_URL?: string;
   readonly VITE_FRIENDBOT_URL?: string;
+  readonly VITE_POLLAR_PUBLISHABLE_KEY?: string;
+  readonly VITE_DEMO_PLATFORM_ID?: string;
 }
 
 interface ImportMeta {

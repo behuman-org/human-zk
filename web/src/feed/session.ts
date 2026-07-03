@@ -5,18 +5,32 @@ import type { UserProfile } from "./types";
 const PREFS_KEY = "behuman_platform_prefs";
 const LOGOUT_FLAG = "behuman_session_logged_out";
 
+export type VerificationState = "idle" | "checking" | "verified" | "unverified" | "rpc_error";
+
 // Identidad anónima activa (platformId hex). null = invitado (sin credencial en el device).
 let activePlatformId: string | null = null;
+let onChainVerified = false;
+
 export function setActiveIdentity(platformId: string | null): void {
   activePlatformId = platformId;
 }
+
 export function getActivePlatformId(): string | null {
   return activePlatformId;
+}
+
+export function setOnChainVerified(v: boolean): void {
+  onChainVerified = v;
+}
+
+export function getOnChainVerified(): boolean {
+  return onChainVerified;
 }
 
 /** Marca la sesión como cerrada (persiste hasta el próximo login explícito). */
 export function markLoggedOut(): void {
   setActiveIdentity(null);
+  setOnChainVerified(false);
   try {
     sessionStorage.setItem(LOGOUT_FLAG, "1");
   } catch {
@@ -40,7 +54,6 @@ export function isLoggedOut(): boolean {
   }
 }
 
-// Override de desarrollo opcional (vacío por defecto → identidad real desde la credencial).
 export const DEMO_PLATFORM_ID = import.meta.env.VITE_DEMO_PLATFORM_ID ?? "";
 
 export function handleOf(platformId: string): string {
@@ -85,16 +98,14 @@ export function defaultProfile(): UserProfile {
     username: prefs.username,
     bio: prefs.bio,
     avatarIndex: prefs.avatarIndex,
-    verified: !!platformId, // tiene credencial Capa 1 → humano verificado
+    verified: onChainVerified && !!platformId,
   };
 }
 
-/** Perfil actual (identidad real si hay credencial; invitado si no). */
 export function loadSession(): UserProfile {
   return defaultProfile();
 }
 
-/** Persiste SOLO las preferencias locales (nunca el platformId ni PII). */
 export function saveSession(profile: UserProfile): void {
   const prefs: Prefs = {
     username: profile.username,

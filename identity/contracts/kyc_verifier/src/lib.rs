@@ -35,6 +35,11 @@ const IDX_ISSUER_ROOT: u32 = 2;
 const IDX_ADDRESS_HASH: u32 = 3;
 const N_PUBLIC_INPUTS: u32 = 4;
 
+/// ~1 día en testnet/mainnet (5s/ledger).
+const DAY_IN_LEDGERS: u32 = 17280;
+const PERSISTENT_TTL_THRESHOLD: u32 = 30 * DAY_IN_LEDGERS;
+const PERSISTENT_TTL_EXTEND_TO: u32 = 30 * DAY_IN_LEDGERS;
+
 #[contracterror]
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 #[repr(u32)]
@@ -96,6 +101,7 @@ impl KycVerifier {
         trusted_root: BytesN<32>,
         vk: VerificationKey,
     ) -> Result<(), Error> {
+        admin.require_auth();
         if env.storage().instance().has(&DataKey::Config) {
             return Err(Error::AlreadyInitialized);
         }
@@ -107,6 +113,20 @@ impl KycVerifier {
             .instance()
             .set(&DataKey::Config, &Config { admin, trusted_root });
         env.storage().instance().set(&DataKey::Vk, &vk);
+        Ok(())
+    }
+
+    /// Actualiza la raíz Merkle del issuer de confianza (p. ej. tras cada enrollment).
+    /// Solo el `admin` configurado en `init` puede invocarla.
+    pub fn update_root(env: Env, new_root: BytesN<32>) -> Result<(), Error> {
+        let mut config: Config = env
+            .storage()
+            .instance()
+            .get(&DataKey::Config)
+            .ok_or(Error::NotInitialized)?;
+        config.admin.require_auth();
+        config.trusted_root = new_root;
+        env.storage().instance().set(&DataKey::Config, &config);
         Ok(())
     }
 
@@ -168,10 +188,19 @@ impl KycVerifier {
         }
 
         // 6. persistir registro + nullifier
-        env.storage()
-            .persistent()
-            .set(&DataKey::Verified(address), &true);
+        let verified_key = DataKey::Verified(address);
+        env.storage().persistent().set(&verified_key, &true);
+        env.storage().persistent().extend_ttl(
+            &verified_key,
+            PERSISTENT_TTL_THRESHOLD,
+            PERSISTENT_TTL_EXTEND_TO,
+        );
         env.storage().persistent().set(&nf_key, &true);
+        env.storage().persistent().extend_ttl(
+            &nf_key,
+            PERSISTENT_TTL_THRESHOLD,
+            PERSISTENT_TTL_EXTEND_TO,
+        );
         Ok(())
     }
 

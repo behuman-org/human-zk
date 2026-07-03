@@ -21,7 +21,7 @@ snarkjs r1cs info build/kyc.r1cs
 
 # Helpers OFF-CHAIN (Poseidon) que usa el SDK para calcular hashes idénticos al circuito
 # (mismo --prime). No se usan on-chain.
-for h in poseidon2 poseidon3; do
+for h in poseidon1 poseidon2 poseidon3; do
   echo "==> Compilando helper $h.circom (off-chain)"
   circom "src/$h.circom" --wasm --prime bls12381 -o build -l node_modules
 done

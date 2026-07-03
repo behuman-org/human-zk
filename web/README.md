@@ -1,6 +1,6 @@
 # web · Frontend (React + Vite + TypeScript)
 
-La app de beHuman: **landing** (onboarding del producto) + **flujos en vivo** de Capa 1 y Capa 2.
+La app de beHuman: **landing** (onboarding del producto) + **flujos en vivo** de Capas 1–3.
 
 > 📐 Diseño landing: inspiración [zk.me](https://www.zk.me/) — ver **`web/docs/DESIGN.md`**
 > 📐 Flujo KYC en vault: `Flujo de KYC` · `Spec — Matcher DNI + Selfie (Capa 1)`
@@ -24,33 +24,29 @@ npm run dev -w @behuman/web         # frontend en :5173
 ```
 
 Abre http://localhost:5173. La cámara requiere contexto seguro (localhost o https).
-Config: `VITE_MATCHER_URL` (default `http://localhost:8787`).
 
-## Rama de trabajo
-
-Frontend: `feat/web-onboarding` (una feature = una rama).
+**Env vars:** en dev, defaults localhost (`requireEnv`). En **producción** fallan si faltan:
+`VITE_MATCHER_URL`, `VITE_PLATFORM_API_URL`, `VITE_FUNDING_API_URL`, más contratos/RPC.
+Red de wallet: `VITE_STELLAR_NETWORK_PASSPHRASE`.
 
 ## Estructura
 
 ```text
 web/
 ├── docs/                 # documentación (design, componentes, changelog)
+├── vercel.json           # CSP, X-Frame-Options, etc.
 ├── index.html
 ├── vite.config.ts
 └── src/
     ├── content/          # copy centralizado (site.ts)
     ├── components/
-    │   ├── hero/         # HeroSection, HeroBackground (canvas)
-    │   ├── layout/       # SiteNav, SiteFooter
-    │   ├── sections/     # HowItWorks, Stats, Compare
-    │   └── ui/           # Button, Badge
-    ├── hooks/            # pointer spring/trail, reduced motion
-    ├── kyc/              # gate Capa 1 (consent → DNI → cara → ZK)
-    ├── platform/         # opinión + moderación (Capa 2)
-    ├── styles/           # tokens.css, global.css
-    ├── test/             # setup vitest
-    ├── App.tsx
-    └── main.tsx
+    ├── hooks/
+    ├── kyc/              # gate Capa 1 (consent → DNI → cara → ZK → on-chain)
+    ├── feed/             # app social Capa 2 (AppGuard, auth Bearer)
+    ├── funding/          # UI Capa 3 (dev)
+    ├── lib/secureStorage.ts  # AES-GCM para secretos en localStorage
+    ├── styles/
+    └── ...
 ```
 
 ## Scripts
@@ -62,11 +58,16 @@ web/
 | `npm run test` | Vitest |
 | `npm run lint` | ESLint |
 
-## Privacidad
+## Privacidad (honesto)
 
-Las imágenes van al backend por multipart y **no se persisten**; el backend devuelve solo
-`ok/score/liveness/reasons`. Nada de PII toca la cadena.
+La PII (DNI, selfies, datos declarados) **viaja al matcher mock** por HTTPS para el gate
+biométrico; se procesa en memoria y **no se persiste** en el issuer. On-chain solo van
+commitment, nullifier, proof. El `secret` ZK y la credencial se guardan en el device con
+**cifrado AES-GCM** (`secureStorage.ts`). Pollar crea wallet custodial por email; el modo
+Pollar ahora hace **registro on-chain real** (`verify_and_register`) antes de marcar verified.
 
-## Próximos pasos
+## Acceso a la app
 
-Ver checklist en [docs/IMPLEMENTATION.md](./docs/IMPLEMENTATION.md).
+Rutas `/app/*` protegidas por `AppGuard`: sesión + credencial local + `is_verified` on-chain.
+
+Ver checklist histórico en [docs/IMPLEMENTATION.md](./docs/IMPLEMENTATION.md).

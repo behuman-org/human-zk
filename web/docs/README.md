@@ -7,12 +7,13 @@
 | [DESIGN.md](./DESIGN.md) | Referencia visual, tokens, animaciones, accesibilidad |
 | [COPY.md](./COPY.md) | Textos de la landing y mapeo secciones |
 | [COMPONENTS.md](./COMPONENTS.md) | Catálogo de componentes y props |
-| [IMPLEMENTATION.md](./IMPLEMENTATION.md) | Log de implementación por slice (actualizado en cada entrega) |
+| [IMPLEMENTATION.md](./IMPLEMENTATION.md) | Log de implementación por slice |
 | [CHANGELOG.md](./CHANGELOG.md) | Cambios notables del frontend |
 
-## Rama activa
+## Estado actual
 
-`feat/web-onboarding` — landing + hero interactivo (slice 1).
+Landing + flujo KYC on-chain + app social (`/app/*`) con guard de rutas, auth Bearer a la
+platform API, storage cifrado y UI de funding (dev). Ver [IMPLEMENTATION.md](./IMPLEMENTATION.md).
 
 ## Comandos
 
@@ -20,11 +21,10 @@
 npm run dev --workspace @behuman/web   # http://localhost:5173
 npm run test --workspace @behuman/web
 npm run lint --workspace @behuman/web
+npm run build --workspace @behuman/web  # en prod exige VITE_* URLs
 ```
 
-## Próximos slices (planificado)
+## Env obligatorias en producción
 
-1. ~~Landing + hero interactivo~~ (este slice)
-2. Conexión wallet (Stellar Wallets Kit)
-3. Flujo issuer mock + generación prueba ZK
-4. Estado `is_verified` + transición a plataforma de opinión
+`VITE_MATCHER_URL`, `VITE_PLATFORM_API_URL`, `VITE_FUNDING_API_URL`,
+`VITE_KYC_VERIFIER_CONTRACT_ID`, `VITE_STELLAR_RPC_URL`, `VITE_STELLAR_NETWORK_PASSPHRASE`.

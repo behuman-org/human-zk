@@ -13,6 +13,9 @@ interface PostComposerProps {
   thread?: Community;
   onPublish: (content: string, communityId: string) => Promise<void>;
   autoFocus?: boolean;
+  /** Mensaje de error externo (p. ej. fallo al publicar). */
+  publishError?: string | null;
+  onClearError?: () => void;
 }
 
 export function PostComposer({
@@ -20,12 +23,17 @@ export function PostComposer({
   thread,
   onPublish,
   autoFocus = false,
+  publishError = null,
+  onClearError,
 }: PostComposerProps) {
   const { user } = useUser();
   const { t } = useI18n();
   const c = t.social.postComposer;
   const [content, setContent] = useState("");
   const [busy, setBusy] = useState(false);
+  const [localError, setLocalError] = useState<string | null>(null);
+
+  const displayError = publishError ?? localError;
 
   const left = MAX - content.length;
   const canPost = content.trim().length > 0 && left >= 0 && !busy;
@@ -33,10 +41,14 @@ export function PostComposer({
   async function submit() {
     if (!canPost || (variant === "thread" && !thread)) return;
     setBusy(true);
+    setLocalError(null);
+    onClearError?.();
     try {
       const communityId = variant === "thread" ? thread!.id : "feed";
       await onPublish(content.trim(), communityId);
       setContent("");
+    } catch (e) {
+      setLocalError((e as Error).message);
     } finally {
       setBusy(false);
     }
@@ -90,6 +102,11 @@ export function PostComposer({
           {busy ? c.sending : c.publish}
         </button>
       </div>
+      {displayError && (
+        <p className="voice-composer__error" role="alert">
+          {displayError}
+        </p>
+      )}
     </section>
   );
 }

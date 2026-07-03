@@ -1,7 +1,7 @@
 // Poseidon sobre BLS12-381 idéntico al circuito (mismo circomlib, mismo --prime).
 //
 // En vez de reimplementar Poseidon (y arriesgar no matchear las constantes que usa
-// circom), usamos los circuitos auxiliares `poseidon2`/`poseidon3` compilados con
+// circom), usamos los circuitos auxiliares `poseidon1`/`poseidon2`/`poseidon3` compilados con
 // `--prime bls12381` y leemos el output del witness (w[1]). Garantiza igualdad con
 // `kyc.circom` por construcción. Validado contra las salidas reales del circuito.
 import { readFileSync } from "node:fs";
@@ -31,6 +31,13 @@ async function loadCalc(name: string): Promise<WitnessCalculator> {
   const wc = (await mod.default(wasm)) as WitnessCalculator;
   cache.set(name, wc);
   return wc;
+}
+
+/** Poseidon(1) sobre BLS12-381 (nullifier global = Poseidon(secret)). */
+export async function poseidon1(a: bigint | string | number): Promise<bigint> {
+  const wc = await loadCalc("poseidon1");
+  const w = await wc.calculateWitness({ a: String(a) }, 0);
+  return w[1];
 }
 
 /** Poseidon(2) sobre BLS12-381. Entradas/salida como bigint (elementos de campo). */

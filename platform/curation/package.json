@@ -11,8 +11,8 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.65.0",
-    "@behuman/shared": "*"
+    "@behuman/shared": "*",
+    "groq-sdk": "^1.3.0"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",

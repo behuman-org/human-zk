@@ -1,5 +1,9 @@
 // Cliente de Artículos (Capa 2 · platform/api). Long-form anclado on-chain como un tweet.
-const BASE = import.meta.env.VITE_PLATFORM_API_URL ?? "http://localhost:8788";
+import { requireEnv } from "../lib/envGuard";
+import { authHeaders, ensurePlatformAuth } from "./platformAuth";
+import { loadAnyCredentialAsync } from "../kyc/credentialStore";
+
+const BASE = requireEnv("VITE_PLATFORM_API_URL", "http://localhost:8788");
 
 async function json<T>(res: Response): Promise<T> {
   if (!res.ok) {
@@ -14,12 +18,20 @@ async function json<T>(res: Response): Promise<T> {
   }
   return (await res.json()) as T;
 }
-const post = (path: string, body: unknown) =>
-  fetch(`${BASE}${path}`, {
+
+async function post(path: string, body: unknown) {
+  const cred = await loadAnyCredentialAsync();
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (cred) {
+    const token = await ensurePlatformAuth(cred);
+    Object.assign(headers, authHeaders(token));
+  }
+  return fetch(`${BASE}${path}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers,
     body: JSON.stringify(body),
   });
+}
 
 export interface ArticleListItem {
   id: string;

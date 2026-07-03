@@ -11,12 +11,14 @@ process.env.ISSUER_STATE = STATE;
 process.env.DEDUP_PEPPER = "test-pepper";
 
 const { enrollVerifiedHuman } = await import("./index.js");
+const { resetIssuerStateForTests } = await import("./store.js");
 
 const dummy = Buffer.from([1, 2, 3]); // el DevProvider ignora las imágenes
 
 describe("enrollVerifiedHuman (gate dev + de-dup anti-Sybil)", () => {
   beforeEach(() => {
     if (existsSync(STATE)) rmSync(STATE);
+    resetIssuerStateForTests();
   });
 
   it("enrola un humano verificado y devuelve issuerRoot + camino Merkle", async () => {

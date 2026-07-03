@@ -18,6 +18,19 @@ import {
   reviewPost,
 } from "@behuman/curation";
 import { strToField, verifyFundingOpinionProof } from "@behuman/sdk";
+import {
+  authPlatformId,
+  issueSessionToken,
+  requireAuth,
+  verifyMembershipProof,
+  type MembershipProof,
+} from "./auth.js";
+import {
+  articleCanonical,
+  assertContentHash,
+  replyCanonical,
+} from "./contentHash.js";
+import { isModeratorRequest, requireModerationAuth } from "./moderationAuth.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: resolve(here, "..", "..", "..", ".env") });
@@ -61,6 +74,7 @@ interface ArticleItem {
   content: string; // markdown
   contentHash: string;
   txHash: string; // ancla on-chain (opinion_board)
+  curation: CurationVerdict;
   ts: number;
 }
 interface ArticleOpinion {
@@ -71,6 +85,7 @@ interface ArticleOpinion {
   content: string;
   contentHash: string;
   txHash: string;
+  curation: CurationVerdict;
   ts: number;
 }
 // Respuesta a un tweet (espejo de ArticleOpinion). `parentId` ata la respuesta a su hilo;
@@ -161,11 +176,11 @@ function save(s: Store): void {
 /** Handle público: últimos 5 caracteres del platformId. */
 const handleOf = (platformId: string) => platformId.slice(-5);
 
-/** Curaduría Nivel 1 (solo contenido + seudónimo; nunca address). Compartida por posts y replies.
- * Sin ANTHROPIC_API_KEY (dev/demo) se aprueba (visible); con clave, si el curador falla se escala. */
+/** Curaduría Nivel 1 (solo contenido + seudónimo; nunca address). Compartida por posts, replies y artículos.
+ * Fail-safe: sin GROQ_API_KEY o si el curador falla → escalated (no publicar sin filtro). */
 async function curate(platformId: string, handle: string, content: string): Promise<CurationVerdict> {
-  if (!process.env.ANTHROPIC_API_KEY) {
-    return { status: "approved", reason: "curaduría deshabilitada (dev)" };
+  if (!process.env.GROQ_API_KEY) {
+    return { status: "escalated", reason: "Curaduría no configurada; revisión humana." };
   }
   try {
     return await reviewPost({ platformId, handle, content });
@@ -175,24 +190,36 @@ async function curate(platformId: string, handle: string, content: string): Prom
   }
 }
 
+/** Texto curado para artículos: título + cuerpo (banner es metadata visual, no evaluable como texto). */
+function articleCurationText(title: string, content: string): string {
+  return `${title}\n\n${content}`.slice(0, 8000);
+}
+
 const app = express();
 // Límite alto: los artículos pueden traer banner + imágenes embebidas (data URLs).
 app.use(express.json({ limit: "12mb" }));
 app.use((_req, res, next) => {
   res.header("Access-Control-Allow-Origin", process.env.CORS_ORIGIN ?? "*");
   res.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-  res.header("Access-Control-Allow-Headers", "Content-Type");
+  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Moderation-Secret");
   if (_req.method === "OPTIONS") return res.sendStatus(204);
   next();
 });
 
 app.get("/health", (_req, res) => res.json({ ok: true }));
 
+// SECURITY: Emite sesión HMAC tras verificar prueba Groth16 de membership (platformId de la prueba).
+app.post("/auth", async (req, res) => {
+  const platformId = await verifyMembershipProof(req.body?.membershipProof as MembershipProof | undefined);
+  if (!platformId) return res.status(403).json({ error: "invalid_membership_proof" });
+  const { token, expiresAt } = issueSessionToken(platformId);
+  res.json({ token, platformId, expiresAt });
+});
+
 // Perfil / username (libre, mutable, sin unicidad por ahora).
-app.post("/profile", (req, res) => {
-  const platformId = String(req.body?.platformId ?? "");
+app.post("/profile", requireAuth, (req, res) => {
+  const platformId = authPlatformId(req);
   const username = String(req.body?.username ?? "").trim().slice(0, 40);
-  if (!platformId) return res.status(400).json({ error: "missing_platformId" });
   const s = load();
   s.profiles[platformId] = { username, handle: handleOf(platformId) };
   save(s);
@@ -207,13 +234,17 @@ app.get("/profile/:platformId", (req, res) => {
 
 // Contenido del post (off-chain). El ancla on-chain la hace el cliente vía opinion_board.
 // Antes de publicarlo, pasa por la curaduría (Nivel 1); los casos dudosos se escalan.
-app.post("/content", async (req, res) => {
-  const platformId = String(req.body?.platformId ?? "");
+app.post("/content", requireAuth, async (req, res) => {
+  const platformId = authPlatformId(req);
   const content = String(req.body?.content ?? "").trim().slice(0, 560);
   const contentHash = String(req.body?.contentHash ?? "");
   const txHash = String(req.body?.txHash ?? "");
-  if (!platformId || !content || !contentHash) {
+  if (!content || !contentHash) {
     return res.status(400).json({ error: "missing_fields" });
+  }
+  // SECURITY: recomputar hash canónico server-side; rechazar si no coincide con el recibido.
+  if (!assertContentHash(content, contentHash)) {
+    return res.status(400).json({ error: "content_hash_mismatch" });
   }
   const s = load();
   const profile = s.profiles[platformId] ?? { username: "", handle: handleOf(platformId) };
@@ -273,12 +304,19 @@ app.get("/feed", (_req, res) => {
 // replies (así una respuesta también tiene su propio hilo: anidado a futuro).
 app.get("/posts/:id", (req, res) => {
   const s = load();
+  const moderator = isModeratorRequest(req);
   const post = s.posts.find((p) => p.id === req.params.id);
   if (post) {
+    if (post.curation?.status === "escalated" && !moderator) {
+      return res.status(404).json({ error: "not_found" });
+    }
     return res.json({ ...post, replyCount: replyCountOf(s, post.id), resonateCount: resonateCountOf(s, post.id) });
   }
   const reply = s.replies.find((r) => r.id === req.params.id);
   if (reply) {
+    if (reply.curation?.status === "escalated" && !moderator) {
+      return res.status(404).json({ error: "not_found" });
+    }
     return res.json({
       ...reply,
       communityId: undefined,
@@ -293,15 +331,19 @@ app.get("/posts/:id", (req, res) => {
 // Responder un tweet: mismo flujo que un post (curaduría Nivel 1 + ancla on-chain en el cliente),
 // pero con parentId. El contentHash on-chain incluye el parentId (la prueba ata la respuesta a
 // su hilo). Sin nullifier: se puede responder varias veces con contenido distinto.
-app.post("/posts/:id/replies", async (req, res) => {
+app.post("/posts/:id/replies", requireAuth, async (req, res) => {
   const s = load();
   const parent = s.posts.find((p) => p.id === req.params.id) ?? s.replies.find((r) => r.id === req.params.id);
   if (!parent) return res.status(404).json({ error: "parent_not_found" });
-  const platformId = String(req.body?.platformId ?? "");
+  const platformId = authPlatformId(req);
   const content = String(req.body?.content ?? "").trim().slice(0, 560);
   const contentHash = String(req.body?.contentHash ?? "");
   const txHash = String(req.body?.txHash ?? "");
-  if (!platformId || !content || !contentHash) return res.status(400).json({ error: "missing_fields" });
+  if (!content || !contentHash) return res.status(400).json({ error: "missing_fields" });
+  const canonical = replyCanonical(req.params.id, content);
+  if (!assertContentHash(canonical, contentHash)) {
+    return res.status(400).json({ error: "content_hash_mismatch" });
+  }
 
   const profile = s.profiles[platformId] ?? { username: "", handle: handleOf(platformId) };
   const curation = await curate(platformId, profile.handle, content);
@@ -393,18 +435,23 @@ app.post("/posts/:id/unresonate", async (req, res) => {
 // ─── Artículos (long-form) ─────────────────────────────────────────────────────
 // Misma transacción on-chain que un tweet (opinion_board), pero el contentHash cubre todo
 // el artículo (título+banner+cuerpo). Off-chain guardamos el contenido; on-chain solo el ancla.
-app.post("/articles", (req, res) => {
-  const platformId = String(req.body?.platformId ?? "");
+app.post("/articles", requireAuth, async (req, res) => {
+  const platformId = authPlatformId(req);
   const title = String(req.body?.title ?? "").trim().slice(0, 200);
   const banner = String(req.body?.banner ?? "");
   const content = String(req.body?.content ?? "");
   const contentHash = String(req.body?.contentHash ?? "");
   const txHash = String(req.body?.txHash ?? "");
-  if (!platformId || !title || !content || !contentHash) {
+  if (!title || !content || !contentHash) {
     return res.status(400).json({ error: "missing_fields" });
+  }
+  const canonical = articleCanonical(title, banner, content);
+  if (!assertContentHash(canonical, contentHash)) {
+    return res.status(400).json({ error: "content_hash_mismatch" });
   }
   const s = load();
   const profile = s.profiles[platformId] ?? { username: "", handle: handleOf(platformId) };
+  const curation = await curate(platformId, profile.handle, articleCurationText(title, content));
   const item: ArticleItem = {
     id: randomUUID(),
     platformId,
@@ -415,11 +462,21 @@ app.post("/articles", (req, res) => {
     content,
     contentHash,
     txHash,
+    curation,
     ts: Date.now(),
   };
+  if (curation.status === "escalated") {
+    escalateToModeration({
+      id: item.id,
+      platformId,
+      handle: item.handle,
+      content: articleCurationText(title, content),
+      reason: curation.reason ?? "",
+    });
+  }
   s.articles.push(item);
   save(s);
-  console.log(`[article] id=${item.id} title="${title.slice(0, 40)}"`);
+  console.log(`[article] id=${item.id} curation=${curation.status} title="${title.slice(0, 40)}"`);
   res.json(item);
 });
 
@@ -427,7 +484,10 @@ app.post("/articles", (req, res) => {
 app.get("/articles", (_req, res) => {
   const s = load();
   res.json(
-    [...s.articles].reverse().map((a) => ({
+    [...s.articles]
+      .reverse()
+      .filter((a) => a.curation?.status !== "escalated")
+      .map((a) => ({
       id: a.id,
       platformId: a.platformId,
       handle: a.handle,
@@ -443,19 +503,27 @@ app.get("/articles", (_req, res) => {
 
 app.get("/articles/:id", (req, res) => {
   const a = load().articles.find((x) => x.id === req.params.id);
-  return a ? res.json(a) : res.status(404).json({ error: "not_found" });
+  if (!a) return res.status(404).json({ error: "not_found" });
+  if (a.curation?.status === "escalated" && !isModeratorRequest(req)) {
+    return res.status(404).json({ error: "not_found" });
+  }
+  return res.json(a);
 });
 
-app.post("/articles/:id/opinions", (req, res) => {
+app.post("/articles/:id/opinions", requireAuth, async (req, res) => {
   const s = load();
   const article = s.articles.find((x) => x.id === req.params.id);
   if (!article) return res.status(404).json({ error: "not_found" });
-  const platformId = String(req.body?.platformId ?? "");
+  const platformId = authPlatformId(req);
   const content = String(req.body?.content ?? "").trim().slice(0, 560);
   const contentHash = String(req.body?.contentHash ?? "");
   const txHash = String(req.body?.txHash ?? "");
-  if (!platformId || !content || !contentHash) return res.status(400).json({ error: "missing_fields" });
+  if (!content || !contentHash) return res.status(400).json({ error: "missing_fields" });
+  if (!assertContentHash(content, contentHash)) {
+    return res.status(400).json({ error: "content_hash_mismatch" });
+  }
   const profile = s.profiles[platformId] ?? { username: "", handle: handleOf(platformId) };
+  const curation = await curate(platformId, profile.handle, content);
   const op: ArticleOpinion = {
     id: randomUUID(),
     articleId: article.id,
@@ -464,25 +532,40 @@ app.post("/articles/:id/opinions", (req, res) => {
     content,
     contentHash,
     txHash,
+    curation,
     ts: Date.now(),
   };
+  if (curation.status === "escalated") {
+    escalateToModeration({
+      id: op.id,
+      platformId,
+      handle: op.handle,
+      content,
+      reason: curation.reason ?? "",
+    });
+  }
   s.articleOpinions.push(op);
   save(s);
+  console.log(`[article-opinion] id=${op.id} curation=${curation.status}`);
   res.json(op);
 });
 
 app.get("/articles/:id/opinions", (req, res) => {
   const s = load();
-  res.json([...s.articleOpinions].filter((o) => o.articleId === req.params.id).reverse());
+  res.json(
+    [...s.articleOpinions]
+      .filter((o) => o.articleId === req.params.id && o.curation?.status !== "escalated")
+      .reverse(),
+  );
 });
 
 // Vista mínima de moderación: cola de casos escalados (contenido + seudónimo, nada más).
-app.get("/moderation/queue", (_req, res) => {
+app.get("/moderation/queue", requireModerationAuth, (_req, res) => {
   res.json(getModerationQueue());
 });
 
 // Resolución de un caso: el moderador lo aprueba o etiqueta; sale de la cola.
-app.post("/moderation/resolve", (req, res) => {
+app.post("/moderation/resolve", requireModerationAuth, (req, res) => {
   const id = String(req.body?.id ?? "");
   const status = String(req.body?.status ?? "approved");
   if (!id || (status !== "approved" && status !== "flagged")) {
@@ -490,11 +573,16 @@ app.post("/moderation/resolve", (req, res) => {
   }
   const removed = resolveModeration(id);
   const s = load();
+  const verdict: CurationVerdict = { status: status as CurationVerdict["status"], reason: "Resuelto por moderación humana." };
   const post = s.posts.find((p) => p.id === id);
-  if (post) {
-    post.curation = { status: status as CurationVerdict["status"], reason: "Resuelto por moderación humana." };
-    save(s);
-  }
+  const reply = s.replies.find((r) => r.id === id);
+  const article = s.articles.find((a) => a.id === id);
+  const opinion = s.articleOpinions.find((o) => o.id === id);
+  if (post) post.curation = verdict;
+  else if (reply) reply.curation = verdict;
+  else if (article) article.curation = verdict;
+  else if (opinion) opinion.curation = verdict;
+  if (post || reply || article || opinion) save(s);
   res.json({ ok: removed });
 });
 

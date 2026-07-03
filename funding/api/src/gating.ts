@@ -27,6 +27,8 @@ export interface FundingOpinionProofInput {
   publicSignals: string[]; // [issuerRoot, platformId, nullifier, scope, nullScope, contentHash]
 }
 
+let loggedMissingPlatformVk = false;
+
 /**
  * Verifica que el solicitante es un humano verificado (sin revelar quién).
  *
@@ -41,7 +43,17 @@ export interface FundingOpinionProofInput {
  */
 export async function verifyMembership(mp?: MembershipProof): Promise<boolean> {
   if (!mp || !Array.isArray(mp.publicSignals) || mp.publicSignals.length === 0) return false;
-  if (!existsSync(PLATFORM_VK)) return false;
+  if (!existsSync(PLATFORM_VK)) {
+    if (!loggedMissingPlatformVk) {
+      loggedMissingPlatformVk = true;
+      console.error(
+        "[funding-gating] Falta platform/circuits/build/verification_key.json — compilar el circuito de plataforma " +
+          "(cd platform/circuits && npm i && bash scripts/compile.sh && bash scripts/setup.sh). " +
+          "Todas las donaciones serán rechazadas hasta que exista la VK.",
+      );
+    }
+    return false;
+  }
   try {
     const vk = JSON.parse(readFileSync(PLATFORM_VK, "utf8"));
     return await verifyProofLocally(mp as never, vk);

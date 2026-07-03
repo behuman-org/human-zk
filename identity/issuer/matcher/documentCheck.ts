@@ -48,11 +48,10 @@ function minTokens(): number {
 // por el match facial DNI↔selfie + liveness (el núcleo de prueba de persona).
 const OCR_ENABLED = process.env.OCR_ENABLED !== "false";
 
-// El cotejo de datos↔OCR es una SEÑAL ANTI-FRAUDE BLANDA, no el gate. El gate real es el
-// match facial DNI↔selfie + liveness. Por defecto NO bloquea (evita falsos rechazos sobre
-// OCR ruidoso de fotos de celular). Con STRICT_DATA_CHECK=true, una contradicción FUERTE y
-// clara (p. ej. el OCR lee con claridad OTRO país conocido) sí puede rebotar.
-const STRICT_DATA_CHECK = process.env.STRICT_DATA_CHECK === "true";
+// Cotejo datos↔OCR: por defecto ESTRICTO (STRICT_DATA_CHECK !== "false"). Cualquier mismatch
+// detectado bloquea. Modo blando legacy: STRICT_DATA_CHECK=false — solo bloquea contradicción
+// fuerte de país. El gate biométrico (cara + liveness) sigue siendo la prueba de persona.
+const STRICT_DATA_CHECK = process.env.STRICT_DATA_CHECK !== "false";
 
 // El nº del DNI es texto chico: el OCR necesita más resolución que la detección de caras.
 // En instancias con RAM (HF Spaces 16GB) subimos la pasada de OCR; bajable por env si hiciera falta.
@@ -292,9 +291,8 @@ export interface DataCheck extends DocumentCheck {
 }
 
 /**
- * Valida que sea un DNI y coteja los datos declarados. El cotejo es una SEÑAL BLANDA: por
- * defecto NO bloquea (el gate real es cara + liveness en /enroll). `ok` es false solo si el
- * documento no es válido (sin cara) o —en modo STRICT— hay una contradicción fuerte y clara.
+ * Valida que sea un DNI y coteja los datos declarados. Por defecto (STRICT_DATA_CHECK) cualquier
+ * mismatch bloquea. Con STRICT_DATA_CHECK=false solo bloquea contradicción fuerte de país.
  * `dataOk`/`mismatches` se devuelven como información (para flag/moderación y diagnóstico).
  */
 export async function validateDocumentData(image: Buffer, declared: DeclaredData): Promise<DataCheck> {
@@ -309,10 +307,10 @@ export async function validateDocumentData(image: Buffer, declared: DeclaredData
     ? crossCheckData(a, declared)
     : { ok: true, mismatches: [] as string[], contradiction: false };
 
-  // No bloqueante por defecto: el cotejo de datos NO rebota a un usuario legítimo aunque el
-  // OCR sea ruidoso. Solo en STRICT una contradicción fuerte (otro país claro) puede rebotar.
-  const blockedByData = STRICT_DATA_CHECK && cross.contradiction;
-  if (blockedByData) reasons.push("data_contradiction");
+  const blockedByData = STRICT_DATA_CHECK ? !cross.ok : cross.contradiction;
+  if (blockedByData) {
+    reasons.push(cross.contradiction ? "data_contradiction" : "data_mismatch");
+  }
 
   return {
     ok: docValid && !blockedByData,

@@ -1,15 +1,17 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { existsSync, rmSync } from "node:fs";
 import { resolve } from "node:path";
-import { createCurator, type AnthropicLike } from "./agent.js";
+import { createCurator, type LLMLike } from "./agent.js";
 
-// Cliente LLM mockeado: devuelve un texto fijo como respuesta del modelo.
-function mockClient(text: string, spy?: (args: Record<string, unknown>) => void): AnthropicLike {
+// Cliente LLM mockeado: devuelve un texto fijo como respuesta del modelo (forma Groq/OpenAI).
+function mockClient(text: string, spy?: (args: Record<string, unknown>) => void): LLMLike {
   return {
-    messages: {
-      create: async (args) => {
-        spy?.(args);
-        return { content: [{ type: "text", text }] };
+    chat: {
+      completions: {
+        create: async (args) => {
+          spy?.(args);
+          return { choices: [{ message: { content: text } }] };
+        },
       },
     },
   };
@@ -62,7 +64,7 @@ describe("createCurator.reviewPost (LLM mockeado)", () => {
   });
 
   it("usa el modelo configurado", () => {
-    expect(createCurator({ client: mockClient("{}"), model: "claude-haiku-4-5" }).model).toBe("claude-haiku-4-5");
+    expect(createCurator({ client: mockClient("{}"), model: "openai/gpt-oss-120b" }).model).toBe("openai/gpt-oss-120b");
   });
 });
 

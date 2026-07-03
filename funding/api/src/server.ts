@@ -43,6 +43,7 @@ import type {
   Sentiment,
 } from "@behuman/shared";
 import { claimNullifier, hydrate, load, withStore } from "./store.js";
+import { sanitizeCampaign } from "./sanitize.js";
 import {
   verifyFundingOpinion,
   verifyMembership,
@@ -53,10 +54,17 @@ import {
 const here = dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: resolve(here, "..", "..", "..", ".env") });
 
-const provider = (process.env.FUNDING_PROVIDER ?? "dev") as FundingProviderKind;
+const RAW_PROVIDER = process.env.FUNDING_PROVIDER ?? "dev";
+if (RAW_PROVIDER !== "dev") {
+  const msg =
+    "El modo funding 'real' (DeFindex/TrustlessWork/campaign_controller) no está implementado; " +
+    "usar FUNDING_PROVIDER=dev. Ver docs/funding.md";
+  console.error(`[funding-api] ${msg}`);
+  throw new Error(msg);
+}
+const provider = "dev" as const satisfies FundingProviderKind;
 const ASSET = (process.env.ASSET ?? "XLM") as FundingAsset;
 const NETWORK = (process.env.DEFINDEX_NETWORK ?? "testnet") as "testnet" | "mainnet" | "public";
-const DEFAULT_VAULT = process.env.DEFINDEX_VAULT ?? "";
 const defindex = createDefindex({
   provider,
   apiUrl: process.env.DEFINDEX_API_URL ?? "https://api.defindex.io",
@@ -113,9 +121,8 @@ app.post(
   "/campaigns",
   wrap(async (req, res) => {
     const b = req.body ?? {};
-    // En prod se exige `signers.platform` (address externa). En dev basta con que la API
-    // genere/derive los keypairs (signerSecretsDev opcional) — ver bloque de firmantes abajo.
-    const hasSigner = provider === "dev" ? true : Boolean(b.signers?.platform);
+    // En dev la API genera/deriva los keypairs (signerSecretsDev opcional en el body).
+    const hasSigner = true;
     if (!b.title || !b.goalAmount || !b.causeWallet || !hasSigner) {
       return bad(400, "missing_fields");
     }
@@ -130,27 +137,18 @@ app.post(
     );
     // RT-01: en dev/demo generamos KEYPAIRS REALES para los firmantes (a menos que el caller
     // los provea), para que el panel validador pueda FIRMAR el challenge y la API verifique la
-    // firma. En prod los firmantes son externos (sus propias wallets) y se pasan solo addresses.
+    // firma. Los secrets se persisten en el store pero NUNCA se devuelven por HTTP.
     let signerSecretsDev: { cause: string; platform: string; neutral: string } | undefined;
     let signers: { cause: string; platform: string; neutral: string };
-    if (provider === "dev") {
-      const provided = b.signerSecretsDev as
-        | { cause?: string; platform?: string; neutral?: string }
-        | undefined;
-      const cause = provided?.cause ?? generateFundingKeypair().secret;
-      const platform = provided?.platform ?? generateFundingKeypair().secret;
-      const neutral = provided?.neutral ?? generateFundingKeypair().secret;
-      signerSecretsDev = { cause, platform, neutral };
-      // Derivar pubkeys de los secrets para que coincidan con las firmas verificadas.
-      const addrOf = (sec: string) => signFundingAction(sec, "x").signer;
-      signers = { cause: addrOf(cause), platform: addrOf(platform), neutral: addrOf(neutral) };
-    } else {
-      signers = {
-        cause: String(b.signers.cause ?? b.causeWallet),
-        platform: String(b.signers.platform),
-        neutral: String(b.signers.neutral ?? process.env.FUNDING_NEUTRAL_ADDRESS ?? ""),
-      };
-    }
+    const provided = b.signerSecretsDev as
+      | { cause?: string; platform?: string; neutral?: string }
+      | undefined;
+    const cause = provided?.cause ?? generateFundingKeypair().secret;
+    const platform = provided?.platform ?? generateFundingKeypair().secret;
+    const neutral = provided?.neutral ?? generateFundingKeypair().secret;
+    signerSecretsDev = { cause, platform, neutral };
+    const addrOf = (sec: string) => signFundingAction(sec, "x").signer;
+    signers = { cause: addrOf(cause), platform: addrOf(platform), neutral: addrOf(neutral) };
 
     // Deploy del escrow (Trustless Work). Si el provider externo falla → 502 controlado.
     const escrow = await tw.deployEscrow({
@@ -176,8 +174,7 @@ app.post(
       raisedAmount: "0",
       deadline: Number(b.deadline ?? Date.now() + 30 * 24 * 3600 * 1000),
       causeWallet: String(b.causeWallet),
-      vaultAddress:
-        provider === "dev" ? "vault_dev_" + id.slice(0, 8) : String(b.vaultAddress ?? DEFAULT_VAULT),
+      vaultAddress: "vault_dev_" + id.slice(0, 8),
       controllerAddress: b.controllerAddress ? String(b.controllerAddress) : undefined,
       escrowId: escrow.escrowId,
       signers,
@@ -189,7 +186,7 @@ app.post(
     await withStore((s) => {
       s.campaigns.push(campaign);
     });
-    res.json(campaign);
+    res.json(sanitizeCampaign(campaign));
   }),
 );
 
@@ -202,7 +199,7 @@ async function withStats(c: Campaign, donations: Donation[]): Promise<Campaign> 
   } catch {
     estApy = undefined; // si el provider de yield no responde, omitimos el dato (no rompe la lista)
   }
-  return { ...c, donorCount: wallets.size, estApy };
+  return sanitizeCampaign({ ...c, donorCount: wallets.size, estApy });
 }
 
 app.get(
@@ -238,15 +235,8 @@ app.post(
 
     if (!(await verifyMembership(membership))) return bad(403, "not_verified_human");
 
-    // Arma la tx de depósito (real: XDR a firmar por la wallet anónima; dev: marcador).
+    // Arma la tx de depósito (dev: marcador determinista) y finaliza directo.
     const { xdr } = await defindex.buildDeposit(snapshot.vaultAddress!, donorWallet, amount);
-
-    if (provider !== "dev") {
-      // real: el cliente firma el XDR y confirma vía /donate/confirm (no se contabiliza acá).
-      return res.json({ ok: true, xdr });
-    }
-
-    // dev: finalizamos directo. La contabilidad se hace bajo lock (RT-06).
     const txHash = (await defindex.send(xdr)).hash;
     const out = await withStore((s) => {
       const c = s.campaigns.find((x) => x.id === snapshot.id);

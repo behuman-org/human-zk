@@ -94,11 +94,11 @@ export function PollarEmailLogin({ onReady }: { onReady: () => void }) {
     return (
       <>
         <p className="auth-page__hint auth-page__hint--warn">
-          La wallet está tardando más de lo normal en crearse. Podés continuar al KYC igual: tu
-          identidad anónima no depende de esa wallet.
+          La wallet está tardando más de lo normal en crearse. Sin wallet de Pollar no podemos
+          registrar tu identidad on-chain — reintentá o usá “Conectar mi wallet”.
         </p>
         <Button variant="secondary" onClick={continueAnyway}>
-          Continuar al KYC
+          Continuar al KYC (puede fallar sin wallet)
         </Button>
       </>
     );

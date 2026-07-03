@@ -2,7 +2,11 @@
  * Cliente REST Capa 2 — `platform/api` (:8788).
  * Contratos alineados con server.ts; rutas sociales listas para cuando el backend las exponga.
  */
-const BASE = import.meta.env.VITE_PLATFORM_API_URL ?? "http://localhost:8788";
+import { requireEnv } from "../lib/envGuard";
+import { authHeaders, ensurePlatformAuth } from "./platformAuth";
+import { loadAnyCredentialAsync } from "../kyc/credentialStore";
+
+const BASE = requireEnv("VITE_PLATFORM_API_URL", "http://localhost:8788");
 
 export type CurationStatus = "approved" | "flagged" | "escalated";
 
@@ -93,14 +97,19 @@ async function parseJson<T>(res: Response): Promise<T> {
   try {
     return JSON.parse(text) as T;
   } catch {
-    // Respuesta no-JSON (p.ej. el 404 de Express devuelve HTML). No es fatal.
     return {} as T;
   }
 }
 
-// Endpoints que ya devolvieron 404/501 (features sociales sin backend): se memorizan para
-// NO volver a pedirlos en cada render (evita spam de 404 en consola). Se descubren una vez.
 const knownMissing = new Set<string>();
+
+async function authHeaderForMutations(method: string): Promise<Record<string, string>> {
+  if (method === "GET" || method === "HEAD") return {};
+  const cred = await loadAnyCredentialAsync();
+  if (!cred) return {};
+  const token = await ensurePlatformAuth(cred);
+  return authHeaders(token);
+}
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const method = (init?.method ?? "GET").toUpperCase();
@@ -108,17 +117,17 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   if (knownMissing.has(key)) {
     throw new PlatformApiError("endpoint_unavailable", 501, "endpoint_unavailable");
   }
+  const auth = await authHeaderForMutations(method);
   const res = await fetch(`${BASE}${path}`, {
     ...init,
     headers: {
       "Content-Type": "application/json",
+      ...auth,
       ...init?.headers,
     },
   });
   if (!res.ok) {
-    // Endpoint inexistente (404/501): lo memorizamos para no reintentar (degrada a default).
     if (res.status === 404 || res.status === 501) knownMissing.add(key);
-    // No parseamos el body como JSON (puede ser HTML); extraemos `error` solo si vino JSON.
     const body = await parseJson<{ error?: string }>(res);
     throw new PlatformApiError(
       typeof body.error === "string" ? body.error : `HTTP ${res.status}`,
@@ -177,17 +186,14 @@ export async function postContent(body: {
   });
 }
 
-/** Un post (o respuesta) por id — para la vista de hilo. */
 export async function getPost(id: string): Promise<ApiFeedItem> {
   return request<ApiFeedItem>(`/posts/${encodeURIComponent(id)}`);
 }
 
-/** Respuestas directas de un tweet (orden cronológico ascendente). */
 export async function getReplies(parentId: string): Promise<ApiReply[]> {
   return request<ApiReply[]>(`/posts/${encodeURIComponent(parentId)}/replies`);
 }
 
-/** Ancla off-chain una respuesta a un tweet (el ancla on-chain la hizo el cliente). */
 export async function postReply(
   parentId: string,
   body: { platformId: string; content: string; contentHash: string; txHash: string },
@@ -198,7 +204,6 @@ export async function postReply(
   });
 }
 
-/** Resuena (reacción anónima): suma el nullifier de la prueba al post. Devuelve la cuenta pública. */
 export async function resonate(postId: string, body: ResonateProofInput): Promise<{ count: number }> {
   return request<{ count: number }>(`/posts/${encodeURIComponent(postId)}/resonate`, {
     method: "POST",
@@ -206,15 +211,12 @@ export async function resonate(postId: string, body: ResonateProofInput): Promis
   });
 }
 
-/** Quita tu Resuena (mismo nullifier vía nueva prueba). Devuelve la cuenta pública. */
 export async function unresonate(postId: string, body: ResonateProofInput): Promise<{ count: number }> {
   return request<{ count: number }>(`/posts/${encodeURIComponent(postId)}/unresonate`, {
     method: "POST",
     body: JSON.stringify(body),
   });
 }
-
-// --- Rutas sociales (pendientes en platform/api) ---
 
 export async function getCommunities(): Promise<ApiCommunity[]> {
   return request<ApiCommunity[]>("/communities");

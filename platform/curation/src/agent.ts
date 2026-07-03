@@ -1,18 +1,23 @@
-// Nivel 1 — agente validador (IA) con la API de Claude (@anthropic-ai/sdk).
+// Nivel 1 — agente validador (IA) con la API de Groq (groq-sdk).
 // Configurable por modelo; testeable inyectando un cliente mock.
-import Anthropic from "@anthropic-ai/sdk";
+import Groq from "groq-sdk";
 import type { CurationInput, CurationVerdict } from "@behuman/shared";
 import { SYSTEM_RUBRIC, parseVerdict } from "./rubric.js";
 
 // Interfaz mínima del cliente que usamos (permite mockear el LLM en tests).
-export interface AnthropicLike {
-  messages: {
-    create(args: Record<string, unknown>): Promise<{ content: Array<{ type: string; text?: string }> }>;
+// Compatible con la forma chat.completions de Groq (OpenAI-like).
+export interface LLMLike {
+  chat: {
+    completions: {
+      create(args: Record<string, unknown>): Promise<{
+        choices: Array<{ message?: { content?: string | null } }>;
+      }>;
+    };
   };
 }
 
 export interface CuratorOptions {
-  client?: AnthropicLike;
+  client?: LLMLike;
   model?: string;
 }
 
@@ -27,20 +32,19 @@ function postPrompt(input: CurationInput): string {
 }
 
 export function createCurator(opts: CuratorOptions = {}): Curator {
-  const client: AnthropicLike = opts.client ?? (new Anthropic() as unknown as AnthropicLike);
-  const model = opts.model ?? process.env.CURATION_MODEL ?? "claude-opus-4-8";
+  const client: LLMLike = opts.client ?? (new Groq() as unknown as LLMLike);
+  const model = opts.model ?? process.env.CURATION_MODEL ?? "openai/gpt-oss-20b";
 
   async function reviewPost(input: CurationInput): Promise<CurationVerdict> {
-    const res = await client.messages.create({
+    const res = await client.chat.completions.create({
       model,
       max_tokens: 512,
-      system: SYSTEM_RUBRIC,
-      messages: [{ role: "user", content: postPrompt(input) }],
+      messages: [
+        { role: "system", content: SYSTEM_RUBRIC },
+        { role: "user", content: postPrompt(input) },
+      ],
     });
-    const text = res.content
-      .filter((b) => b.type === "text")
-      .map((b) => b.text ?? "")
-      .join("");
+    const text = res.choices?.[0]?.message?.content ?? "";
     return parseVerdict(text);
   }
 

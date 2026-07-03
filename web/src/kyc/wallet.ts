@@ -5,10 +5,19 @@ import {
   allowAllModules,
   FREIGHTER_ID,
 } from "@creit.tech/stellar-wallets-kit";
+import * as StellarSdk from "@stellar/stellar-sdk";
 import { rpc } from "./stellar";
 
+const NETWORK_PASSPHRASE =
+  import.meta.env.VITE_STELLAR_NETWORK_PASSPHRASE ?? StellarSdk.Networks.TESTNET;
+
+const WALLET_NETWORK =
+  NETWORK_PASSPHRASE === StellarSdk.Networks.PUBLIC
+    ? WalletNetwork.PUBLIC
+    : WalletNetwork.TESTNET;
+
 const kit = new StellarWalletsKit({
-  network: WalletNetwork.TESTNET,
+  network: WALLET_NETWORK,
   selectedWalletId: FREIGHTER_ID,
   modules: allowAllModules(),
 });
@@ -43,9 +52,10 @@ export async function connectWallet(): Promise<string> {
  * fondeada"). No mueve fondos reales: es testnet.
  */
 export async function ensureFunded(address: string): Promise<void> {
+  if (WALLET_NETWORK === WalletNetwork.PUBLIC) return;
   try {
     await rpc.getAccount(address);
-    return; // ya existe/fondeada
+    return;
   } catch {
     /* no encontrada todavía: la fondeamos abajo */
   }

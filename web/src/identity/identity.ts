@@ -4,7 +4,8 @@
 // La PII/secret nunca salen del dispositivo; la UI nunca muestra address/platformId completos.
 import { connectWallet } from "../kyc/wallet";
 import { isVerified } from "../kyc/chain";
-import { loadAnyCredential, type StoredCredential } from "../kyc/credentialStore";
+import { loadAnyCredential, warmCredentialCache, type StoredCredential } from "../kyc/credentialStore";
+import { loadRegistrationAddress, saveRegistrationAddress } from "../kyc/registrationStore";
 import { generatePlatformProof, handleOf, platformIdHex } from "../platform/zk2";
 
 export interface ConnectResult {
@@ -14,14 +15,29 @@ export interface ConnectResult {
 
 /** Conecta la wallet y consulta si ya es un humano verificado on-chain. */
 export async function connectAndCheck(): Promise<ConnectResult> {
+  await warmCredentialCache();
   const address = await connectWallet();
+  saveRegistrationAddress(address);
   let verified = false;
   try {
     verified = await isVerified(address);
   } catch {
-    verified = false; // sin red/contrato no bloqueamos; el onboarding decide
+    verified = false;
   }
   return { address, verified };
+}
+
+/** ¿Hay credencial local Y registro on-chain confirmado? */
+export async function hasVerifiedCredential(): Promise<boolean> {
+  await warmCredentialCache();
+  const cred = loadAnyCredential();
+  const addr = loadRegistrationAddress();
+  if (!cred || !addr) return false;
+  try {
+    return await isVerified(addr);
+  } catch {
+    return false;
+  }
 }
 
 /** ¿Hay una credencial de Capa 1 en este dispositivo? */

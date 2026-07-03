@@ -25,3 +25,10 @@ del producto viven en la **vault de Obsidian**, en el repo hermano `obsidian-vau
 3. Empezá por `00 - Inicio/🏠 Home`.
 
 > 🔗 Cuando el repo de docs sea público, enlazar acá su URL.
+
+## Hackathon y migración (repo)
+
+| Doc | Para qué |
+|-----|----------|
+| [`hackathon-real-world-zk.md`](./hackathon-real-world-zk.md) | Checklist y pitch para **Stellar Hacks: Real-World ZK** |
+| [`migracion-repo-zk.md`](./migracion-repo-zk.md) | Cómo pasar de Pulso / `ACRC-Zk/beHuman` a repo nuevo |

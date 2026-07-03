@@ -15,7 +15,9 @@ import multer from "multer";
 import type { EnrollmentResult, MatchResult } from "@behuman/shared";
 import { getProvider } from "./provider.js";
 import { validateDocument, validateDocumentData, type DeclaredData } from "./documentCheck.js";
-import { enrollVerifiedHuman } from "../src/index.js";
+import { enrollVerifiedHuman, hydrateIssuerState, getDedupPepper, resetDocEnrollment, resetIssuerStateAll } from "../src/index.js";
+import { createRateLimiter } from "./rateLimit.js";
+import { claimCommitment, consumeEnrollSession, openEnrollSession } from "./enrollSession.js";
 
 // Cargar .env desde la raíz del repo (matcher/ está en identity/issuer/matcher).
 const here = dirname(fileURLToPath(import.meta.url));
@@ -27,10 +29,12 @@ const upload = multer({
 });
 
 const app = express();
+app.set("trust proxy", 1);
 app.use(express.json());
 
-// CORS: el frontend (Vite, :5173) hace requests cross-origin al gate (:8787).
-const CORS_ORIGIN = process.env.CORS_ORIGIN ?? "*";
+// CORS restrictivo por defecto (localhost Vite). En prod/staging setear CORS_ORIGIN explícito.
+// Usar CORS_ORIGIN=* solo en dev si hace falta acceso cross-origin amplio.
+const CORS_ORIGIN = process.env.CORS_ORIGIN ?? "http://localhost:5173";
 app.use((req, res, next) => {
   res.header("Access-Control-Allow-Origin", CORS_ORIGIN);
   res.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
@@ -39,9 +43,36 @@ app.use((req, res, next) => {
   next();
 });
 
+const enrollRateLimit = createRateLimiter({
+  windowMs: Number(process.env.RATE_LIMIT_WINDOW_MS ?? 60_000),
+  max: Number(process.env.RATE_LIMIT_ENROLL_MAX ?? 10),
+});
+const verifyRateLimit = createRateLimiter({
+  windowMs: Number(process.env.RATE_LIMIT_WINDOW_MS ?? 60_000),
+  max: Number(process.env.RATE_LIMIT_VERIFY_MAX ?? 20),
+});
+
+function clientIp(req: express.Request): string {
+  return req.ip ?? req.socket.remoteAddress ?? "unknown";
+}
+
 app.get("/health", (_req, res) => {
   res.json({ ok: true, provider: getProvider().kind, threshold: Number(process.env.MATCH_THRESHOLD ?? 0.6) });
 });
+
+/** Solo desarrollo: resetea de-dup del issuer si un intento previo quedó a medias. */
+if (process.env.NODE_ENV !== "production" || process.env.ALLOW_ISSUER_RESET === "true") {
+  app.post("/dev/reset-doc", express.json(), (req, res) => {
+    const docId = String(req.body?.docId ?? "").trim();
+    if (!docId) return res.status(400).json({ ok: false, error: "missing_docId" });
+    const removed = resetDocEnrollment(docId);
+    res.json({ ok: true, removed, docId: docId.slice(0, 4) + "…" });
+  });
+  app.post("/dev/reset-all", (_req, res) => {
+    resetIssuerStateAll();
+    res.json({ ok: true, message: "issuer state cleared" });
+  });
+}
 
 type MulterFiles = Record<string, Express.Multer.File[]>;
 
@@ -99,7 +130,16 @@ app.post("/verify-data", upload.single("document"), async (req, res) => {
         `mismatches=${check.mismatches.join(",")} ocrNums=${check.docNumbersFound} ocrYears=${check.yearsFound} ` +
         `keywords=${check.keywordsFound} reasons=${check.reasons.join(",")}`,
     );
-    res.json({ ok: check.ok, reasons: check.reasons, mismatches: check.mismatches });
+    let enrollNonce: string | undefined;
+    if (check.ok) {
+      enrollNonce = openEnrollSession(
+        parsed.value.docId,
+        parsed.value.birthYear,
+        parsed.value.countryCode,
+        clientIp(req),
+      );
+    }
+    res.json({ ok: check.ok, reasons: check.reasons, mismatches: check.mismatches, enrollNonce });
   } catch (err) {
     console.error("[verify-data] error:", (err as Error).message);
     res.status(500).json({ error: "data_check_failed" });
@@ -108,6 +148,7 @@ app.post("/verify-data", upload.single("document"), async (req, res) => {
 
 app.post(
   "/verify",
+  verifyRateLimit,
   upload.fields([
     { name: "document", maxCount: 1 },
     { name: "selfie", maxCount: 20 },
@@ -149,6 +190,7 @@ app.post(
 
 app.post(
   "/enroll",
+  enrollRateLimit,
   upload.fields([
     { name: "document", maxCount: 1 },
     { name: "selfie", maxCount: 20 },
@@ -159,6 +201,7 @@ app.post(
     const selfieFrames = (files?.selfie ?? []).map((f) => f.buffer);
     const commitment = String(req.body?.commitment ?? "");
     const docId = String(req.body?.docId ?? "");
+    const enrollNonce = String(req.body?.enrollNonce ?? "") || undefined;
     // Datos declarados para el cotejo anti-fraude (efímeros; nunca se persisten ni loguean).
     const birthYear = Number(req.body?.birthYear);
     const countryCode = Number(req.body?.countryCode);
@@ -169,9 +212,19 @@ app.post(
     if (!docId) return res.status(400).json({ error: "missing_docId" });
     if (!birthYear || !countryCode) return res.status(400).json({ error: "missing_declared_data" });
 
+    const ip = clientIp(req);
+    if (!consumeEnrollSession(docId, birthYear, countryCode, ip, enrollNonce)) {
+      console.log("[enroll] rechazo reasons=enroll_session_required");
+      return res.json({ ok: false, reasons: ["enroll_session_required"] } satisfies EnrollmentResult);
+    }
+    if (!claimCommitment(commitment)) {
+      console.log("[enroll] rechazo reasons=commitment_replay");
+      return res.json({ ok: false, reasons: ["commitment_replay"] } satisfies EnrollmentResult);
+    }
+
     try {
-      // Anti-fraude AUTORITATIVO: el DNI debe ser válido Y los datos declarados deben
-      // coincidir con el OCR. No se puede evadir desde un cliente manipulado.
+      // Cotejo datos↔OCR (STRICT_DATA_CHECK=true por defecto): documento válido y datos
+      // declarados deben coincidir con lo leído por OCR cuando hay señal disponible.
       const docCheck = await validateDocumentData(document, { birthYear, docId, countryCode });
       if (!docCheck.ok) {
         const reasons = docCheck.mismatches.length ? ["data_mismatch", ...docCheck.reasons] : docCheck.reasons;
@@ -208,9 +261,14 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   process.on("unhandledRejection", (reason) => {
     console.error("[unhandledRejection]", reason instanceof Error ? reason.message : String(reason));
   });
-  app.listen(port, () => {
-    console.log(`beHuman matcher escuchando en :${port} (provider=${getProvider().kind})`);
-  });
+  void (async () => {
+    getDedupPepper();
+    getProvider();
+    await hydrateIssuerState();
+    app.listen(port, () => {
+      console.log(`beHuman matcher escuchando en :${port} (provider=${getProvider().kind})`);
+    });
+  })();
 }
 
 export { app };

@@ -1,8 +1,9 @@
 // Cliente del gate (matcher). La PII (DNI + frames) va al backend por multipart;
 // el backend nunca devuelve imágenes, solo el resultado.
 import type { EnrollmentResult, MatchResult } from "@behuman/shared";
+import { requireEnv } from "../lib/envGuard";
 
-const BASE = import.meta.env.VITE_MATCHER_URL ?? "http://localhost:8787";
+const BASE = requireEnv("VITE_MATCHER_URL", "http://localhost:8787");
 
 export interface DocumentCheckResult {
   ok: boolean;

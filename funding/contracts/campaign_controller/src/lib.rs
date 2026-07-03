@@ -68,6 +68,11 @@ pub enum DataKey {
 
 const RELEASE_THRESHOLD: u32 = 2; // 2-de-3
 
+/// ~1 día en testnet/mainnet (5s/ledger).
+const DAY_IN_LEDGERS: u32 = 17280;
+const PERSISTENT_TTL_THRESHOLD: u32 = 30 * DAY_IN_LEDGERS;
+const PERSISTENT_TTL_EXTEND_TO: u32 = 30 * DAY_IN_LEDGERS;
+
 #[contract]
 pub struct CampaignController;
 
@@ -131,6 +136,11 @@ impl CampaignController {
         let key = DataKey::Contribution(donor.clone());
         let prev: i128 = env.storage().persistent().get(&key).unwrap_or(0);
         env.storage().persistent().set(&key, &(prev + amount));
+        env.storage().persistent().extend_ttl(
+            &key,
+            PERSISTENT_TTL_THRESHOLD,
+            PERSISTENT_TTL_EXTEND_TO,
+        );
         let raised = Self::raised(env.clone()) + amount;
         env.storage().instance().set(&DataKey::Raised, &raised);
         Ok(())
@@ -181,6 +191,11 @@ impl CampaignController {
             return Err(Error::NothingToRefund);
         }
         env.storage().persistent().set(&key, &0i128);
+        env.storage().persistent().extend_ttl(
+            &key,
+            PERSISTENT_TTL_THRESHOLD,
+            PERSISTENT_TTL_EXTEND_TO,
+        );
         env.storage().instance().set(&DataKey::Raised, &(raised - amount));
         token::Client::new(&env, &cfg.asset).transfer(
             &env.current_contract_address(),

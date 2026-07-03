@@ -26,7 +26,8 @@ Compone `HeroBackground`, badge, título, lead, CTAs y marquee del stack. Copy d
 
 ### `LayersSection`
 
-`id="capas"`. CAPA 1 identidad + CAPA 2 plataforma; puente `is_verified`.
+`id="capas"`. CAPA 1 identidad + CAPA 2 plataforma + CAPA 3 funding; puente Capa 1 =
+`is_verified(address)`; Capa 2 = `platformId` ZK.
 
 ### `HowItWorksSection`
 
@@ -39,10 +40,6 @@ Grid 2×2 / 4 columnas con métricas placeholder.
 ### `CompareSection`
 
 `id="compare"`. Tabla 7 filas: aspecto | tradicional | beHuman.
-
-### `LayersSection`
-
-`id="capas"`. Dos tarjetas CAPA 1 / CAPA 2 + puente `is_verified`.
 
 ### `PlatformSection`
 

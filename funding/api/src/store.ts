@@ -61,17 +61,21 @@ export async function hydrate(): Promise<void> {
 export function load(): FundingState {
   return state;
 }
-export function save(s: FundingState): void {
+export async function save(s: FundingState): Promise<void> {
   state = s;
   if (USE_UPSTASH) {
-    void upstashCmd(["SET", STORE_KEY, JSON.stringify(s)]).catch((e) =>
-      console.error("[funding-store] persist Upstash falló:", (e as Error).message),
-    );
+    try {
+      await upstashCmd(["SET", STORE_KEY, JSON.stringify(s)]);
+    } catch (e) {
+      console.error("[funding-store] persist Upstash falló:", (e as Error).message);
+      throw e;
+    }
   } else {
     try {
       writeFileSync(STORE, JSON.stringify(s, null, 2));
-    } catch {
-      /* dev sin permisos: ignorar */
+    } catch (e) {
+      console.error("[funding-store] persist archivo falló:", (e as Error).message);
+      throw e;
     }
   }
 }
@@ -90,7 +94,7 @@ export function withStore<T>(fn: (s: FundingState) => Promise<T> | T): Promise<T
   const run = chain.then(async () => {
     const s = load();
     const out = await fn(s);
-    save(s);
+    await save(s);
     return out;
   });
   // La cola no debe romperse si un `fn` lanza: encadenamos un catch silencioso.

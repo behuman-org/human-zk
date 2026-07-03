@@ -23,6 +23,11 @@ export interface IdentityProvider {
 /** Devuelve el provider activo según `IDENTITY_PROVIDER` (default: testnet). */
 export function getProvider(): IdentityProvider {
   const kind = (process.env.IDENTITY_PROVIDER ?? "testnet") as IdentityProviderKind;
+  if (kind === "dev" && process.env.NODE_ENV === "production") {
+    throw new Error(
+      "IDENTITY_PROVIDER=dev está prohibido en producción — aprueba cualquier identidad sin biometría.",
+    );
+  }
   if (kind === "renaper") return new RenaperProvider();
   if (kind === "dev") return new DevProvider();
   return new MatcherTestnetProvider();

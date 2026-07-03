@@ -7,7 +7,8 @@ pragma circom 2.1.6;
 //   "Conozco una credencial KYC (birthYear, countryCode, secret) cuyo commitment
 //    pertenece al árbol de credenciales de un issuer de confianza (issuerRoot),
 //    soy mayor de edad y mi país está permitido; ato esta prueba a mi address
-//    Stellar (addressHash) y derivo un nullifier anti-replay."
+//    Stellar (addressHash, validado on-chain por el contrato) y derivo un nullifier
+//    global anti-Sybil (una persona = un registro)."
 //
 // 📐 Diseño en la vault de Obsidian: `Diseño del Circuito ZK`, `Modelo de Datos`,
 //    `Flujo de KYC`.
@@ -34,6 +35,12 @@ pragma circom 2.1.6;
 //  4) currentYear es una CONSTANTE de compilación (MVP). En producción debe ser un
 //     input público validado contra el ledger para que el usuario no mienta la edad
 //     (ver "Riesgos" en `Diseño del Circuito ZK`).
+//
+//  5) NULLIFIER GLOBAL = Poseidon(secret) — anti-Sybil real (1 persona = 1 registro).
+//     NO incluye addressHash: evita que la misma persona registre N wallets distintas.
+//     El address binding es independiente: addressHash (public input) + require_auth
+//     en el contrato. Orden de public signals sin cambios: [commitment, nullifier,
+//     issuerRoot, addressHash].
 // ============================================================================
 
 include "../node_modules/circomlib/circuits/poseidon.circom";
@@ -158,11 +165,17 @@ template KycCredential(LEVELS, MIN_AGE, CURRENT_YEAR, N_COUNTRIES) {
         country.allowed[i] <== allowedCountries[i];
     }
 
-    // 5) nullifier = Poseidon(secret, addressHash) — anti-replay + address binding.
-    component nf = Poseidon(2);
+    // 5) nullifier = Poseidon(secret) — anti-Sybil global (1 persona = 1 registro).
+    //    El address binding lo provee addressHash (public input) + validación on-chain
+    //    (require_auth + comparación de hash en el contrato); no depende del nullifier.
+    component nf = Poseidon(1);
     nf.inputs[0] <== secret;
-    nf.inputs[1] <== addressHash;
     nullifier <== nf.out;
+
+    // addressHash se expone como public signal para address binding on-chain (validado por el contrato).
+    // Constraint trivial para que no sea eliminado por el optimizador.
+    signal addressHashSq;
+    addressHashSq <== addressHash * addressHash;
 }
 
 // LEVELS=4 (16 hojas), MIN_AGE=18, CURRENT_YEAR=2026, N_COUNTRIES=4.

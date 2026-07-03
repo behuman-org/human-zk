@@ -8,14 +8,28 @@ import {
   type ReactNode,
 } from "react";
 import { bootstrapProfileFromApi, syncProfileToApi } from "./feedApi";
-import { markLoggedOut, isLoggedOut, loadSession, saveSession, setActiveIdentity } from "./session";
+import {
+  markLoggedOut,
+  isLoggedOut,
+  loadSession,
+  saveSession,
+  setActiveIdentity,
+  setOnChainVerified,
+  getOnChainVerified,
+  type VerificationState,
+} from "./session";
 import { derivePlatformIdentity } from "../identity/identity";
+import { isVerified } from "../kyc/chain";
+import { warmCredentialCache, loadAnyCredentialAsync } from "../kyc/credentialStore";
+import { loadRegistrationAddress } from "../kyc/registrationStore";
+import { ensurePlatformAuth, clearPlatformAuth } from "./platformAuth";
 import type { UserProfile } from "./types";
 
 interface UserContextValue {
   user: UserProfile;
-  /** ¿Tiene identidad verificada (credencial Capa 1) en este dispositivo? */
+  /** Humano verificado on-chain (is_verified) + credencial local. */
   verified: boolean;
+  verificationState: VerificationState;
   updateProfile: (patch: Partial<Pick<UserProfile, "username" | "bio" | "avatarIndex">>) => void;
   logout: () => void;
 }
@@ -24,36 +38,70 @@ const UserContext = createContext<UserContextValue | null>(null);
 
 export function UserProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<UserProfile>(() => loadSession());
+  const [verificationState, setVerificationState] = useState<VerificationState>("checking");
+  const [onChainOk, setOnChainOk] = useState(false);
 
-  // Deriva la identidad REAL (platformId) desde la credencial Capa 1 (prueba ZK local).
-  // Si no hay credencial → invitado (platformId vacío, verified false).
   useEffect(() => {
     let cancelled = false;
     void (async () => {
       if (isLoggedOut()) {
         setActiveIdentity(null);
+        setOnChainVerified(false);
+        setVerificationState("idle");
+        setOnChainOk(false);
         setUser(loadSession());
         return;
       }
+
+      setVerificationState("checking");
+      await warmCredentialCache();
 
       let id: Awaited<ReturnType<typeof derivePlatformIdentity>> = null;
       try {
         id = await derivePlatformIdentity();
       } catch (err) {
-        // Un error al derivar la identidad (p. ej. prueba ZK) no debe dejar al usuario
-        // como invitado en silencio: lo logueamos para diagnóstico.
         console.error("[UserContext] derivePlatformIdentity falló:", err);
       }
       if (cancelled) return;
+
+      const cred = await loadAnyCredentialAsync();
+      const regAddr = loadRegistrationAddress();
+
+      let chainVerified = false;
+      if (cred && regAddr) {
+        try {
+          chainVerified = await isVerified(regAddr);
+        } catch (err) {
+          console.error("[UserContext] isVerified RPC falló:", err);
+          if (!cancelled) {
+            setVerificationState("rpc_error");
+            setOnChainOk(false);
+            setOnChainVerified(false);
+          }
+          return;
+        }
+      }
+
+      if (cancelled) return;
+      setOnChainOk(chainVerified);
+      setOnChainVerified(chainVerified);
+      setVerificationState(chainVerified && cred ? "verified" : "unverified");
+
       setActiveIdentity(id?.platformId ?? null);
       const base = loadSession();
-      setUser(base);
-      if (id) {
+      setUser({ ...base, verified: chainVerified && !!id?.platformId });
+
+      if (id && cred && chainVerified) {
+        try {
+          await ensurePlatformAuth(cred);
+        } catch (err) {
+          console.error("[UserContext] platform auth falló:", err);
+        }
         try {
           const profile = await bootstrapProfileFromApi(id.platformId);
           if (!cancelled) {
-            setUser(profile);
-            saveSession(profile);
+            setUser({ ...profile, verified: true });
+            saveSession({ ...profile, verified: true });
           }
         } catch {
           /* perfil off-chain best-effort */
@@ -78,13 +126,18 @@ export function UserProvider({ children }: { children: ReactNode }) {
   );
 
   const logout = useCallback(() => {
+    clearPlatformAuth();
     markLoggedOut();
+    setOnChainOk(false);
+    setVerificationState("idle");
     setUser(loadSession());
   }, []);
 
+  const verified = onChainOk && getOnChainVerified() && !!user.platformId;
+
   const value = useMemo(
-    () => ({ user, verified: !!user.platformId, updateProfile, logout }),
-    [user, updateProfile, logout],
+    () => ({ user, verified, verificationState, updateProfile, logout }),
+    [user, verified, verificationState, updateProfile, logout],
   );
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>;

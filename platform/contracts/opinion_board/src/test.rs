@@ -64,6 +64,7 @@ fn platform_id(env: &Env) -> BytesN<32> {
 }
 
 fn init_default(env: &Env) -> OpinionBoardClient<'static> {
+    env.mock_all_auths();
     let client = OpinionBoardClient::new(env, &env.register(OpinionBoard, ()));
     client.init(&Address::generate(env), &issuer_root(env), &test_vk(env));
     client
@@ -100,6 +101,7 @@ fn register_identity_happy() {
 #[test]
 fn register_rejects_untrusted_issuer() {
     let env = Env::default();
+    env.mock_all_auths();
     let client = OpinionBoardClient::new(&env, &env.register(OpinionBoard, ()));
     let mut wrong = testdata::PUBLIC_SIGNALS[IDX_ISSUER_ROOT as usize];
     wrong[31] ^= 0x01;
@@ -150,7 +152,22 @@ fn post_rejects_replay() {
 #[test]
 fn rejects_double_init() {
     let env = Env::default();
+    env.mock_all_auths();
     let client = init_default(&env);
     let res = client.try_init(&Address::generate(&env), &issuer_root(&env), &test_vk(&env));
     assert_eq!(res, Err(Ok(Error::AlreadyInitialized)));
+}
+
+#[test]
+fn register_rejects_nonzero_content_hash() {
+    let env = Env::default();
+    let client = init_default(&env);
+    let mut sig = testdata::PUBLIC_SIGNALS;
+    sig[IDX_CONTENT_HASH as usize][31] = 1;
+    let mut inputs = Vec::new(&env);
+    for s in sig.iter() {
+        inputs.push_back(BytesN::from_array(&env, s));
+    }
+    let res = client.try_register_identity(&test_proof(&env), &inputs);
+    assert_eq!(res, Err(Ok(Error::InvalidRegistration)));
 }

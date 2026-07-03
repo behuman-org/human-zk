@@ -6,7 +6,7 @@ import { resolve } from "node:path";
 import * as snarkjs from "snarkjs";
 import * as StellarSdk from "@stellar/stellar-sdk";
 import type { Capa1Credential } from "@behuman/shared";
-import { circuitsBuildDir } from "./poseidonBls.js";
+import { circuitsBuildDir, poseidon1 } from "./poseidonBls.js";
 import { encodeProof, fieldTo32, g1ToBytes, g2ToBytes, type SnarkProof } from "./blsEncode.js";
 
 export * from "./poseidonBls.js";
@@ -35,6 +35,15 @@ export function addressHashField(address: string): string {
   const digest = createHash("sha256").update(scval).digest();
   digest[0] &= 0x3f; // < 2^254 < r_bls12381
   return BigInt("0x" + digest.toString("hex")).toString();
+}
+
+/**
+ * Nullifier global anti-Sybil: `Poseidon(secret)`.
+ * Una persona (mismo secret) → un solo nullifier on-chain, independiente del address.
+ * El address binding lo valida el contrato vía `addressHash` (public input separado).
+ */
+export async function nullifierField(secret: string): Promise<string> {
+  return (await poseidon1(secret)).toString();
 }
 
 export interface GeneratedProof {

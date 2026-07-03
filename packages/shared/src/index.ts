@@ -1,4 +1,4 @@
-// @behuman/shared — Tipos compartidos entre web, api, sdk y curation (STUB).
+// @behuman/shared — Tipos compartidos entre web, api, sdk y curation (3 capas).
 // Fuente de verdad del diseño: la vault de Obsidian.
 
 // ─── CAPA 1 · Identidad ───────────────────────────────────────────────────

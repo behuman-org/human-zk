@@ -173,6 +173,15 @@
   cursor: not-allowed;
 }
 
+.voice-composer__error {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  font-size: 0.88rem;
+  color: var(--color-danger, #f87171);
+  background: color-mix(in srgb, var(--color-danger, #f87171) 12%, transparent);
+  border-radius: var(--radius-md);
+}
+
 @media (max-width: 480px) {
   .voice-composer {
     margin: var(--space-3) var(--app-gutter) var(--space-4);

@@ -24,6 +24,12 @@ const IDX_PLATFORM_ID: u32 = 1;
 const IDX_CONTENT_HASH: u32 = 2;
 const N_PUBLIC_INPUTS: u32 = 3;
 
+/// ~1 día en testnet/mainnet (5s/ledger).
+const DAY_IN_LEDGERS: u32 = 17280;
+const PERSISTENT_TTL_THRESHOLD: u32 = 30 * DAY_IN_LEDGERS;
+const PERSISTENT_TTL_EXTEND_TO: u32 = 30 * DAY_IN_LEDGERS;
+const ZERO_CONTENT_HASH: [u8; 32] = [0u8; 32];
+
 #[contracterror]
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 #[repr(u32)]
@@ -37,6 +43,7 @@ pub enum Error {
     NotInitialized = 7,
     MalformedPublicInputs = 8,
     MalformedVerifyingKey = 9,
+    InvalidRegistration = 10,
 }
 
 #[derive(Clone)]
@@ -94,6 +101,7 @@ impl OpinionBoard {
         trusted_issuer_root: BytesN<32>,
         vk: VerificationKey,
     ) -> Result<(), Error> {
+        admin.require_auth();
         if env.storage().instance().has(&DataKey::Config) {
             return Err(Error::AlreadyInitialized);
         }
@@ -116,14 +124,22 @@ impl OpinionBoard {
         public_inputs: Vec<BytesN<32>>,
     ) -> Result<(), Error> {
         Self::check_issuer(&env, &public_inputs)?;
+        let content_hash = public_inputs.get(IDX_CONTENT_HASH).unwrap();
+        if content_hash.to_array() != ZERO_CONTENT_HASH {
+            return Err(Error::InvalidRegistration);
+        }
         let platform_id = public_inputs.get(IDX_PLATFORM_ID).unwrap();
         if env.storage().persistent().has(&DataKey::Identity(platform_id.clone())) {
             return Err(Error::AlreadyRegistered);
         }
         Self::verify_or_err(&env, &proof, &public_inputs)?;
-        env.storage()
-            .persistent()
-            .set(&DataKey::Identity(platform_id), &true);
+        let identity_key = DataKey::Identity(platform_id);
+        env.storage().persistent().set(&identity_key, &true);
+        env.storage().persistent().extend_ttl(
+            &identity_key,
+            PERSISTENT_TTL_THRESHOLD,
+            PERSISTENT_TTL_EXTEND_TO,
+        );
         Ok(())
     }
 
@@ -152,8 +168,19 @@ impl OpinionBoard {
             content_hash,
             timestamp: env.ledger().timestamp(),
         };
-        env.storage().persistent().set(&DataKey::Post(id), &record);
+        let post_key = DataKey::Post(id);
+        env.storage().persistent().set(&post_key, &record);
+        env.storage().persistent().extend_ttl(
+            &post_key,
+            PERSISTENT_TTL_THRESHOLD,
+            PERSISTENT_TTL_EXTEND_TO,
+        );
         env.storage().persistent().set(&posted_key, &true);
+        env.storage().persistent().extend_ttl(
+            &posted_key,
+            PERSISTENT_TTL_THRESHOLD,
+            PERSISTENT_TTL_EXTEND_TO,
+        );
         env.storage().instance().set(&DataKey::PostCount, &(id + 1));
         Ok(id)
     }

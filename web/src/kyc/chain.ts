@@ -2,6 +2,20 @@
 import * as StellarSdk from "@stellar/stellar-sdk";
 import { CONTRACT_ID, NETWORK_PASSPHRASE, rpc } from "./stellar";
 import { signXdr } from "./wallet";
+
+/** Firma XDR (wallet externa o Pollar custodial vía setTransactionSigner). */
+export type TransactionSigner = (xdr: string, networkPassphrase: string) => Promise<string>;
+
+let activeSigner: TransactionSigner | null = null;
+
+export function setTransactionSigner(signer: TransactionSigner | null): void {
+  activeSigner = signer;
+}
+
+async function signTransaction(xdr: string, networkPassphrase: string): Promise<string> {
+  const signer = activeSigner ?? ((x, np) => signXdr(x, np));
+  return signer(xdr, networkPassphrase);
+}
 import { encodeProof, fieldTo32, g1ToBytes, g2ToBytes } from "./bls";
 import type { GeneratedProof } from "./zk";
 
@@ -58,7 +72,7 @@ async function invoke(address: string, op: StellarSdk.xdr.Operation): Promise<st
     }
     tx = StellarSdk.rpc.assembleTransaction(tx, sim).build();
 
-    const signed = await signXdr(tx.toXDR(), NETWORK_PASSPHRASE);
+    const signed = await signTransaction(tx.toXDR(), NETWORK_PASSPHRASE);
     const stx = TransactionBuilder.fromXDR(signed, NETWORK_PASSPHRASE) as StellarSdk.Transaction;
     const sent = await rpc.sendTransaction(stx);
     if (sent.status === "ERROR") {

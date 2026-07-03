@@ -27,7 +27,9 @@ Humano · Cálido · Transparente. Voz directa, empática, sin hype. La prueba d
 1. **Extender, no reinventar** — anclar en `tokens.css`, `behuman-ui.css`, `social-ui.css` y componentes ya construidos; las variantes deben sentirse nativas del sistema actual (tema claro, acento celeste, Plus Jakarta Sans).
 2. **Humano antes que protocolo** — copy y UI priorizan la persona verificada y su voz; la cripto/ZK aparece cuando aporta confianza, no como decoración.
 3. **Landing y app con el mismo rigor** — mismos tokens, motion con propósito y accesibilidad en `/` y en `/app/*`; no tratar la landing como “marketing genérico” ni la app como “afterthought”.
-4. **Transparencia honesta** — declarar scaffolding, issuer mock y límites actuales; nunca simular métricas o verificación real que aún no existe.
+4. **Transparencia honesta** — declarar issuer mock, matcher que recibe PII por HTTPS (sin
+   persistir), funding dev-only y límites actuales; nunca simular métricas o verificación
+   regulada que no existe.
 5. **Social calmado** — feed legible, jerarquía clara, acciones deliberadas; evitar densidad que compita con la atención del usuario.
 
 ## Accessibility & Inclusion

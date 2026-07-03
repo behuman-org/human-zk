@@ -8,7 +8,8 @@
 // Anti-Sybil (dos candados, ambos visibles):
 //   1) de-dup por documento en el issuer  -> "este documento ya fue validado".
 //   2) nullifier on-chain en verify_and_register -> "este humano ya tiene identidad".
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { usePollar } from "@pollar/react";
 import { Button } from "../components/ui/Button";
 import { Consent } from "./Consent";
 import { DocumentUpload } from "./DocumentUpload";
@@ -17,9 +18,12 @@ import { FaceScan } from "./FaceScan";
 import { connectWallet, ensureFunded } from "./wallet";
 import { enroll, verifyDocumentData } from "./api";
 import { computeCommitment, generateProof, randomSecret, type GeneratedProof } from "./zk";
-import { initIfNeeded, isVerified, verifyAndRegister, ContractError } from "./chain";
+import { initIfNeeded, isVerified, verifyAndRegister, ContractError, setTransactionSigner } from "./chain";
 import { CONTRACT_ID } from "./stellar";
-import { loadCredential, saveCredential, type StoredCredential } from "./credentialStore";
+import { loadCredentialAsync, saveCredential, type StoredCredential } from "./credentialStore";
+import { createPollarSigner } from "./pollarSigner";
+import { saveRegistrationAddress } from "./registrationStore";
+import { POLLAR_ENABLED } from "../identity/pollar";
 
 type Step = "connect" | "checking" | "already" | "consent" | "document" | "attributes" | "scan" | "processing" | "done" | "error";
 
@@ -34,7 +38,6 @@ const REASON: Record<string, string> = {
   document_unreadable: "No se pudo leer el documento (subí una foto más nítida).",
 };
 
-// Por qué se rebota un DNI (cotejo de datos): nombres de campo → texto.
 const DATA_REASON: Record<string, string> = {
   doc_number: "el número de documento",
   birth_year: "el año de nacimiento",
@@ -44,13 +47,31 @@ const DATA_REASON: Record<string, string> = {
   no_face_in_document: "no se detecta la cara en el documento",
 };
 
-export function KycFlow({
+export function KycFlow(props: { onDone?: () => void; mode?: "wallet" | "credential" } = {}) {
+  if (props.mode === "credential" && POLLAR_ENABLED) {
+    return <KycFlowPollar {...props} mode="credential" />;
+  }
+  return <KycFlowWallet {...props} mode={props.mode ?? "wallet"} />;
+}
+
+function KycFlowPollar(props: { onDone?: () => void; mode: "credential" }) {
+  const pollar = usePollar();
+  return <KycFlowCore {...props} pollar={pollar} />;
+}
+
+function KycFlowWallet(props: { onDone?: () => void; mode: "wallet" | "credential" }) {
+  return <KycFlowCore {...props} pollar={null} />;
+}
+
+function KycFlowCore({
   onDone,
-  mode = "wallet",
-}: { onDone?: () => void; mode?: "wallet" | "credential" } = {}) {
-  // mode "wallet": flujo completo (conecta wallet + registra on-chain).
-  // mode "credential": onboarding Pollar — solo crea la credencial ZK client-side (matcher),
-  // sin conectar wallet ni firmar/registrar on-chain (Pollar ya creó la wallet por email).
+  mode,
+  pollar,
+}: {
+  onDone?: () => void;
+  mode: "wallet" | "credential";
+  pollar: ReturnType<typeof usePollar> | null;
+}) {
   const [step, setStep] = useState<Step>(mode === "credential" ? "consent" : "connect");
   const [address, setAddress] = useState<string | null>(null);
   const [doc, setDoc] = useState<Blob | null>(null);
@@ -63,13 +84,18 @@ export function KycFlow({
   const [nullifierMsg, setNullifierMsg] = useState<string | null>(null);
   const [bounce, setBounce] = useState<string | null>(null);
 
+  // SECURITY: modo Pollar usa signTx de la wallet custodial para verify_and_register on-chain.
+  useEffect(() => {
+    if (!pollar?.signTx) return;
+    setTransactionSigner(createPollarSigner(pollar.signTx));
+    return () => setTransactionSigner(null);
+  }, [pollar?.signTx]);
+
   function fail(m: string) {
     setError(m);
     setStep("error");
   }
 
-  // Anti-fraude: tras declarar los datos, se cotejan contra el DNI. Si no coinciden,
-  // se "rebota" el DNI (vuelve al paso de subida) para cargar uno válido que coincida.
   async function onAttributes(a: AttributesInput) {
     setAttrs(a);
     if (!doc) return setStep("document");
@@ -91,16 +117,14 @@ export function KycFlow({
     try {
       const addr = await connectWallet();
       setAddress(addr);
+      saveRegistrationAddress(addr);
       setStep("checking");
-      // Testnet: si la wallet es nueva (no fondeada), la fondeamos automáticamente. Si falla
-      // (red caída, etc.) seguimos igual: el error real va a salir más claro al registrar.
       await ensureFunded(addr).catch(() => {});
-      // Anti-Sybil temprano: si esta wallet YA tiene identidad, no se permite re-validar.
       let already = false;
       try {
         already = await isVerified(addr);
       } catch {
-        already = false; // si el chequeo falla (red/contrato), no bloqueamos el alta
+        already = false;
       }
       setStep(already ? "already" : "consent");
     } catch (e) {
@@ -108,46 +132,16 @@ export function KycFlow({
     }
   }
 
-  // Onboarding Pollar (credential): matcher → credencial ZK client-side, sin wallet ni on-chain.
-  async function processCredentialOnly(frames: Blob[]) {
+  /** Enroll + prueba ZK + registro on-chain (wallet externa o Pollar custodial). */
+  async function runOnChainRegistration(
+    frames: Blob[],
+    signerAddress: string,
+  ): Promise<void> {
     if (!doc || !attrs) return fail("Faltan datos del flujo.");
     setStep("processing");
-    try {
-      let cred: StoredCredential | null = loadCredential(attrs.docId);
-      if (!cred) {
-        setMsg("Generando tu secreto e identidad (en el dispositivo)…");
-        const secret = randomSecret();
-        const commitment = await computeCommitment(attrs, secret);
-        setMsg("Validando documento + cara y registrando en el issuer…");
-        const en = await enroll(doc, frames, commitment, {
-          docId: attrs.docId,
-          birthYear: attrs.birthYear,
-          countryCode: attrs.countryCode,
-        });
-        if (!en.ok) return fail(en.reasons.map((r) => REASON[r] ?? r).join(" "));
-        cred = {
-          attributes: attrs,
-          secret,
-          issuerRoot: en.issuerRoot!,
-          pathElements: en.pathElements!,
-          pathIndices: en.pathIndices!,
-        };
-        saveCredential(attrs.docId, cred);
-      }
-      setVerified(true);
-      setStep("done");
-    } catch (e) {
-      fail((e as Error).message);
-    }
-  }
 
-  async function process(frames: Blob[]) {
-    if (mode === "credential") return processCredentialOnly(frames);
-    if (!doc || !attrs || !address) return fail("Faltan datos del flujo.");
-    setStep("processing");
     try {
-      // Reanudar desde una credencial guardada (evita re-enrolar y el de-dup).
-      let cred: StoredCredential | null = loadCredential(attrs.docId);
+      let cred: StoredCredential | null = await loadCredentialAsync(attrs.docId);
       if (cred) {
         setMsg("Recuperando tu credencial guardada en este dispositivo…");
       } else {
@@ -163,22 +157,34 @@ export function KycFlow({
         });
         if (!en.ok) {
           if (en.reasons.includes("already_enrolled")) {
-            return fail(
-              "Este documento ya fue validado en otra sesión/dispositivo y no tenemos tu credencial acá. " +
-                "Usá “Ver mi estado” con tu wallet; si necesitás re-validar, pedí un reset del issuer.",
-            );
+            // El issuer recuerda el doc (enroll previo pasó el gate) pero la credencial local
+            // puede estar cifrada o en otra pestaña — reintentar lectura async antes de fallar.
+            cred = await loadCredentialAsync(attrs.docId);
+            if (!cred) {
+              return fail(
+                "Este documento ya pasó la validación biométrica en un intento anterior, " +
+                  "pero el registro on-chain no terminó y no encontramos tu credencial en este navegador. " +
+                  "En local: pará el issuer y ejecutá `rm identity/issuer/.issuer-state.json`, " +
+                  "luego reiniciá el matcher. También podés probar otra pestaña si no cerraste la anterior.",
+              );
+            }
+            setMsg("Recuperando credencial de un intento anterior…");
+          } else {
+            return fail(en.reasons.map((r) => REASON[r] ?? r).join(" "));
           }
-          return fail(en.reasons.map((r) => REASON[r] ?? r).join(" "));
+        } else {
+          cred = {
+            attributes: attrs,
+            secret,
+            issuerRoot: en.issuerRoot!,
+            pathElements: en.pathElements!,
+            pathIndices: en.pathIndices!,
+          };
+          saveCredential(attrs.docId, cred);
         }
-        cred = {
-          attributes: attrs,
-          secret,
-          issuerRoot: en.issuerRoot!,
-          pathElements: en.pathElements!,
-          pathIndices: en.pathIndices!,
-        };
-        saveCredential(attrs.docId, cred); // resumible si falla el on-chain
       }
+
+      if (!cred) return fail("No se pudo obtener la credencial de identidad.");
 
       setMsg("Generando la prueba ZK en tu dispositivo (la PII no sale)…");
       const gen = await generateProof(
@@ -186,17 +192,17 @@ export function KycFlow({
         cred.secret,
         cred.pathElements,
         cred.pathIndices,
-        address,
+        signerAddress,
       );
       setLastProof(gen);
 
-      setMsg("Inicializando el registro on-chain si hace falta (firmá en la wallet)…");
-      await initIfNeeded(address, cred.issuerRoot);
+      setMsg("Inicializando el registro on-chain si hace falta…");
+      await initIfNeeded(signerAddress, cred.issuerRoot);
 
-      setMsg("Registrando en Stellar — firmá en tu wallet…");
+      setMsg("Registrando en Stellar…");
       let hash: string;
       try {
-        hash = await verifyAndRegister(address, gen);
+        hash = await verifyAndRegister(signerAddress, gen);
       } catch (e) {
         if (e instanceof ContractError && e.code === 3) {
           return fail("Este humano ya tiene identidad (rechazo on-chain por nullifier).");
@@ -204,16 +210,53 @@ export function KycFlow({
         throw e;
       }
       setTxHash(hash);
+      saveRegistrationAddress(signerAddress);
 
       setMsg("Confirmando on-chain…");
-      setVerified(await isVerified(address));
+      const onChain = await isVerified(signerAddress);
+      setVerified(onChain);
+      if (!onChain) {
+        return fail("El registro on-chain no se confirmó. Reintentá o contactá soporte.");
+      }
       setStep("done");
     } catch (e) {
       fail((e as Error).message);
     }
   }
 
-  // Demuestra el segundo candado: reenviar la misma prueba -> nullifier ya usado.
+  async function processCredentialWithPollar(frames: Blob[]) {
+    // SECURITY: Pollar expone walletAddress + signTx (custodial server-side). Sin esto,
+    // bloqueamos Capa 2 — no marcamos verified=true solo con credencial local.
+    if (!POLLAR_ENABLED || !pollar) {
+      return fail(
+        "El registro on-chain requiere Pollar configurado. Conectá una wallet externa en /login.",
+      );
+    }
+    if (!pollar.verified || !pollar.isAuthenticated) {
+      return fail("Tu sesión de Pollar no está confirmada. Volvé a iniciar sesión con email.");
+    }
+    const pollarAddr = pollar.walletAddress?.trim();
+    if (!pollarAddr) {
+      return fail(
+        "Tu wallet de Pollar aún no está lista. Esperá a que termine de crearse o reconectá.",
+      );
+    }
+    if (!pollar.signTx) {
+      return fail(
+        "Pollar no expone firma de transacciones en esta versión. Usá “Conectar mi wallet” para registrarte on-chain.",
+      );
+    }
+    await ensureFunded(pollarAddr).catch(() => {});
+    setAddress(pollarAddr);
+    await runOnChainRegistration(frames, pollarAddr);
+  }
+
+  async function process(frames: Blob[]) {
+    if (mode === "credential") return processCredentialWithPollar(frames);
+    if (!address) return fail("Faltan datos del flujo.");
+    await runOnChainRegistration(frames, address);
+  }
+
   async function retryRegister() {
     if (!address || !lastProof) return;
     setNullifierMsg("Reenviando la misma prueba…");
@@ -289,7 +332,7 @@ export function KycFlow({
       <section className="bh-card">
         <h2 className="bh-h2">Procesando…</h2>
         <p className="bh-sub">{msg}</p>
-        <p className="bh-note">Puede pedirte firmar en la wallet.</p>
+        <p className="bh-note">Puede pedirte confirmar la transacción en tu wallet.</p>
       </section>
     );
 
@@ -304,7 +347,6 @@ export function KycFlow({
       </section>
     );
 
-  // done
   return (
     <section className="bh-card">
       <p className="bh-eyebrow">Listo</p>
@@ -320,7 +362,7 @@ export function KycFlow({
         </p>
       )}
       <div className="bh-actions">
-        {onDone && <Button onClick={onDone}>Entrar a la app</Button>}
+        {onDone && verified && <Button onClick={onDone}>Entrar a la app</Button>}
         {mode === "wallet" && lastProof && (
           <Button variant="ghost" onClick={retryRegister}>
             Probar el candado anti-duplicados

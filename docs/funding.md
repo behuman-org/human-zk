@@ -53,8 +53,10 @@ anclas de opinión (`platformId` + `contentHash`).
 ### Abstracción de proveedores
 
 `FUNDING_PROVIDER` selecciona la implementación:
-- `dev`: mocks deterministas (XDR/hash falsos, APY fijo) → flujo testeable sin red ni keys.
-- `real`: `@behuman/sdk` hace fetch a las APIs de **DeFindex** y **Trustless Work** (con keys).
+- **`dev`** (único operativo): mocks deterministas in-memory → flujo testeable sin red ni keys.
+- **`real`**: **bloqueado al iniciar** la API — la integración DeFindex + Trustless Work +
+  `campaign_controller` on-chain **no está cableada**. El server falla con mensaje claro si
+  se intenta `FUNDING_PROVIDER=real`.
 
 Activo configurable por `ASSET` (su **SAC**): `XLM` en testnet, `USDC` en prod.
 
@@ -89,17 +91,18 @@ Variables (`.env`, ver `.env.example`): `ASSET`, `FUNDING_PROVIDER`, `FUNDING_AP
 
 ## Estado
 
-- **Contrato** `campaign_controller`: implementado + 10 tests (SAC de testutils) verdes;
-  `stellar contract build` OK.
-- **Circuito** `funding_opinion`: ~3.7k constraints; prueba y verifica con snarkjs (BLS12-381).
-- **API + SDK + Web**: implementados; e2e en dev verde (campaña → donar → hitos → release;
-  opinión con prueba real; nullifier anti-Sybil; binding rechaza reusar la prueba en otra
-  campaña o con otro contenido).
-- **Pendiente para testnet real**: keys de DeFindex/Trustless Work y que el **Manager del
-  vault Blend** sea el `campaign_controller` (integración cross-contract). La curaduría de
-  opiniones requiere `ANTHROPIC_API_KEY` (sin ella, las opiniones se escalan a revisión).
+> ⚠️ **Modo real no implementado.** Solo `FUNDING_PROVIDER=dev` arranca la API. La integración
+> cross-contract DeFindex/TW + orquestación de firmas por rol está **pendiente** (ver abajo).
 
-> ⚠️ El issuer de Capa 1 es un **mock** (no KYC real). Esta capa es exploratoria.
+- **Contrato** `campaign_controller`: implementado + tests; `init` exige auth admin;
+  `extend_ttl` en writes persistentes; `stellar contract build` OK.
+- **Circuito** `funding_opinion`: ~3.7k constraints; prueba y verifica con snarkjs (BLS12-381).
+- **API + SDK + Web en dev**: e2e verde en modo mock (campaña → donar → hitos → release;
+  opinión con prueba real; nullifier anti-Sybil; binding rechaza reuso).
+- **Modo `real`**: bloqueado — no usar en prod hasta cablear integraciones.
+- **Curaduría de opiniones**: requiere `ANTHROPIC_API_KEY` en platform API; sin clave → escalado.
+
+> ⚠️ El issuer de Capa 1 es un **mock** (no KYC real). Esta capa es exploratoria / demo.
 
 ## Despliegue en testnet
 
@@ -159,12 +162,10 @@ Patrón: cada acción devuelve `{ unsignedTransaction }` → se firma con el rol
 stablecoin** (USDC): no custodia las donaciones (eso es el vault DeFindex en XLM), es la capa
 de workflow/disputa. Los participantes deben tener la **trustline USDC** y estar fondeados.
 
-### Pendiente para cerrar
-1. **Orquestación de firma por rol en el server**: TW firma cada acción con la secret del rol
-   correspondiente (deploy=plataforma, approve=approver, release=releaseSigner). Cablear
-   `signXdr` per-acción en `funding/api` (en dev usa `signerSecretsDev`).
-2. **Reconciliación de activo TW vs DeFindex**: el vault DeFindex es XLM; TW exige stablecoin
-   (USDC). Decisión de producto (campaña en USDC, o TW solo como workflow nominal).
-3. **Cross-contract**: que el `campaign_controller` deposite en el vault DeFindex y sea su
-   Manager (necesita la interfaz del contrato del vault).
-4. **Flip a `real` en el browser**: wallets efímeras de donación fondeadas (friendbot) + firma.
+### Pendiente para cerrar (modo real)
+1. **Desbloquear `FUNDING_PROVIDER=real`** en la API e implementar orquestación DeFindex + TW.
+2. **Orquestación de firma por rol en el server**: TW firma cada acción con la secret del rol
+   correspondiente. En dev **no** se exponen `signerSecretsDev` en respuestas HTTP.
+3. **Reconciliación de activo TW vs DeFindex**: vault DeFindex XLM vs TW USDC — decisión de producto.
+4. **Cross-contract**: `campaign_controller` como Manager del vault DeFindex.
+5. **Flip a `real` en el browser**: wallets efímeras fondeadas + firma on-chain real.

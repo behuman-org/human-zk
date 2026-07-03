@@ -1,5 +1,6 @@
 import { Outlet } from "react-router-dom";
 import { UserProvider } from "../feed/UserContext";
+import { AppGuard } from "../feed/AppGuard";
 import { AppPreferencesProvider, useAppPreferences } from "../preferences/AppPreferencesProvider";
 import { RightRail } from "../components/feed/RightRail";
 import { SidebarNav } from "../components/feed/SidebarNav";
@@ -16,7 +17,9 @@ function SocialShellLayout() {
           <SidebarNav />
         </div>
         <div className="social-shell__main">
-          <Outlet />
+          <AppGuard>
+            <Outlet />
+          </AppGuard>
         </div>
         <aside className="social-shell__right" aria-label="Panel contextual">
           <RightRail />

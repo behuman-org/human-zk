@@ -173,23 +173,49 @@ export async function fetchFeed(opts?: {
 
 export async function publishPost(input: NewPostInput): Promise<FeedPost> {
   const content = input.content.trim();
-  // Cadena real Capa 2: prueba ZK + ancla on-chain (opinion_board) con cuenta efímera.
-  // platformId/contentHash/txHash salen del ancla; la identidad real no se expone en la UI.
-  const { platformId, contentHash, txHash } = await anchorOpinion(content);
+  let platformId: string;
+  let contentHash: string;
+  let txHash: string;
+  try {
+    ({ platformId, contentHash, txHash } = await anchorOpinion(content));
+  } catch (e) {
+    throw new PublishError(
+      (e as Error).message || "No se pudo anclar tu post on-chain.",
+      "anchor",
+    );
+  }
 
-  const item = await platformApi.postContent({
+  const body = {
     platformId,
     content,
     contentHash,
     txHash,
     communityId: input.communityId === GENERAL_FEED_ID ? undefined : input.communityId,
-  });
-
-  return {
-    ...mapApiItem(item, platformId),
-    communityId: input.communityId,
-    isOwn: true,
   };
+
+  const maxAttempts = 3;
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    try {
+      const item = await platformApi.postContent(body);
+      return {
+        ...mapApiItem(item, platformId),
+        communityId: input.communityId,
+        isOwn: true,
+      };
+    } catch (e) {
+      if (attempt === maxAttempts - 1) {
+        throw new PublishError(
+          txHash
+            ? "Tu post quedó anclado on-chain pero no pudimos guardarlo en el feed. Reintentá con el mismo texto."
+            : (e as Error).message || "No se pudo guardar el post en el feed.",
+          "persist",
+          { platformId, contentHash, txHash },
+        );
+      }
+      await sleep(800 * (attempt + 1));
+    }
+  }
+  throw new PublishError("Error inesperado al publicar.", "persist", { platformId, contentHash, txHash });
 }
 
 /** Un tweet (o respuesta) por id — el post padre de un hilo. */
@@ -491,6 +517,25 @@ export function displayName(username: string, handle: string): string {
 
 export function communityLabel(c: Community): string {
   return `r/${c.name}`;
+}
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/** Error al publicar: distingue fallo de anclaje vs persistencia off-chain. */
+export class PublishError extends Error {
+  readonly phase: "anchor" | "persist";
+  readonly anchored?: { platformId: string; contentHash: string; txHash: string };
+
+  constructor(
+    message: string,
+    phase: "anchor" | "persist",
+    anchored?: { platformId: string; contentHash: string; txHash: string },
+  ) {
+    super(message);
+    this.name = "PublishError";
+    this.phase = phase;
+    this.anchored = anchored;
+  }
 }
 
 export { avatarColor };

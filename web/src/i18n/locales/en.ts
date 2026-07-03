@@ -169,7 +169,7 @@ export const en: SiteMessages = {
       { label: "Platform", href: "#plataforma" },
       { label: "Quality", href: "#curacion" },
     ],
-    external: [{ label: "GitHub", href: "https://github.com/behuman-org/human" }],
+    external: [{ label: "GitHub", href: "https://github.com/behuman-org/human-zk" }],
     legalPrefix: "©",
     legalSuffix: "human.",
   },

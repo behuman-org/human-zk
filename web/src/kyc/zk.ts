@@ -39,7 +39,7 @@ export async function addressHashField(address: string): Promise<string> {
 
 export interface GeneratedProof {
   proof: SnarkProof;
-  publicSignals: string[]; // [commitment, nullifier, issuerRoot, addressHash]
+  publicSignals: string[]; // [commitment, nullifier=Poseidon(secret), issuerRoot, addressHash]
 }
 
 /** Calcula el commitment = Poseidon(birthYear, countryCode, secret) (sin path real). */

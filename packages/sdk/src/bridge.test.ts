@@ -2,8 +2,14 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import type { Capa1Credential } from "@behuman/shared";
-import { addressHashField, generateProof, verifyProofLocally, buildVerifyArgs } from "./index.js";
-import { poseidon2, poseidon3, circuitsBuildDir } from "./poseidonBls.js";
+import {
+  addressHashField,
+  generateProof,
+  nullifierField,
+  verifyProofLocally,
+  buildVerifyArgs,
+} from "./index.js";
+import { poseidon1, poseidon3, circuitsBuildDir } from "./poseidonBls.js";
 import { buildTree, merkleProof } from "./merkle.js";
 import { g1ToBytes, g2ToBytes, encodeProof } from "./blsEncode.js";
 
@@ -55,6 +61,13 @@ describe("poseidon bls (idéntico al circuito)", () => {
       "36994699823721141971394725509675585589277291566104333993581842441978584684119",
     );
   });
+
+  it("nullifier = Poseidon(secret) — global anti-Sybil (sin addressHash)", async () => {
+    const secret = "1234567890123456789012345678901234567890";
+    const nf = await poseidon1(secret);
+    expect(await nullifierField(secret)).toBe(nf.toString());
+    // TODO: golden del nullifier — regenerar tras recompilar kyc.circom + poseidon1.circom
+  });
 });
 
 // End-to-end del puente off-chain: credencial -> árbol -> prueba -> verify (snarkjs).
@@ -81,6 +94,7 @@ describe("puente off-chain (credencial -> prueba ZK)", () => {
 
     // publicSignals = [commitment, nullifier, issuerRoot, addressHash]
     expect(gen.publicSignals[0]).toBe(commitment.toString());
+    expect(gen.publicSignals[1]).toBe(await nullifierField(secret)); // Poseidon(secret), no address
     expect(gen.publicSignals[2]).toBe(tree.root.toString()); // el circuito calcula el mismo root
     expect(gen.publicSignals[3]).toBe(addressHashField(G));
 

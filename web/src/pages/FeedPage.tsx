@@ -17,6 +17,7 @@ export function FeedPage() {
   const [sort, setSort] = useState<FeedSort>("new");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [publishError, setPublishError] = useState<string | null>(null);
 
   const community = communities.find((c) => c.slug === routeSlug || c.id === routeSlug);
   const isCommunity = Boolean(community);
@@ -48,11 +49,17 @@ export function FeedPage() {
   }, [load]);
 
   async function handlePublish(content: string, communityId: string) {
-    await publishPost({
-      content,
-      communityId: communityId === "feed" ? GENERAL_FEED_ID : communityId,
-    });
-    await load();
+    setPublishError(null);
+    try {
+      await publishPost({
+        content,
+        communityId: communityId === "feed" ? GENERAL_FEED_ID : communityId,
+      });
+      await load();
+    } catch (e) {
+      setPublishError((e as Error).message);
+      throw e;
+    }
   }
 
   return (
@@ -112,6 +119,8 @@ export function FeedPage() {
         variant={isCommunity && community ? "thread" : "general"}
         thread={community}
         onPublish={handlePublish}
+        publishError={publishError}
+        onClearError={() => setPublishError(null)}
       />
 
       <section

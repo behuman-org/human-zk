@@ -5,6 +5,10 @@
 //! del `groth16_verifier` oficial** (pairing BLS12-381), además de la lógica de
 //! registro: issuer root, address binding y nullifier anti-replay.
 //!
+//! NOTA (nullifier global): el circuito usa `nullifier = Poseidon(secret)` (anti-Sybil).
+//! Los artefactos en `testdata.rs` (proof + PUBLIC_SIGNALS) deben regenerarse con
+//! `identity/circuits/scripts/gen_testdata.mjs` tras recompilar kyc.circom — no editar a mano.
+//!
 //! Los puntos BLS se parsean desde las coordenadas decimales de snarkjs con
 //! ark-bls12-381 (igual que el test del verificador oficial de soroban-examples).
 
@@ -90,6 +94,7 @@ fn deploy(env: &Env) -> KycVerifierClient<'static> {
 }
 
 fn init_default(env: &Env) -> KycVerifierClient<'static> {
+    env.mock_all_auths();
     let client = deploy(env);
     let admin = Address::generate(env);
     client.init(&admin, &trusted_root(env), &test_vk(env));
@@ -202,10 +207,41 @@ fn rejects_nullifier_replay() {
 #[test]
 fn rejects_double_init() {
     let env = Env::default();
+    env.mock_all_auths();
     let client = init_default(&env);
     let admin = Address::generate(&env);
     let res = client.try_init(&admin, &trusted_root(&env), &test_vk(&env));
     assert_eq!(res, Err(Ok(Error::AlreadyInitialized)));
+}
+
+// init exige require_auth del admin.
+#[test]
+fn init_requires_admin_auth() {
+    let env = Env::default();
+    env.mock_all_auths();
+    let client = deploy(&env);
+    let admin = Address::generate(&env);
+    client.init(&admin, &trusted_root(&env), &test_vk(&env));
+    let auths = env.auths();
+    assert!(auths.iter().any(|(addr, _)| *addr == admin));
+}
+
+// update_root permite rotar la raíz Merkle del issuer (multi-usuario).
+#[test]
+fn update_root_changes_trusted_root() {
+    let env = Env::default();
+    env.mock_all_auths();
+    let client = init_default(&env);
+
+    let mut new_root = testdata::PUBLIC_SIGNALS[IDX_ISSUER_ROOT as usize];
+    new_root[31] ^= 0x01;
+    let new_root = BytesN::from_array(&env, &new_root);
+    client.update_root(&new_root);
+
+    env.mock_all_auths();
+    let addr = Address::from_string(&String::from_str(&env, FIXED_ADDR));
+    let res = client.try_verify_and_register(&addr, &test_proof(&env), &public_inputs(&env));
+    assert_eq!(res, Err(Ok(Error::UntrustedIssuer)));
 }
 
 // ---------------------------------------------------------------------------
