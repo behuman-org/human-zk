@@ -125,16 +125,16 @@ export async function createCommunity(input: NewCommunityInput): Promise<Communi
   const session = loadSession();
   const name = normalizeThreadName(input.name);
   if (name.length < 3) {
-    throw new Error("El nombre del hilo debe tener al menos 3 caracteres (letras, números o _).");
+    throw new Error("Thread name must be at least 3 characters (letters, numbers, or _).");
   }
   const description = input.description.trim().slice(0, 200);
   if (!description) {
-    throw new Error("Agregá una descripción para el hilo.");
+    throw new Error("Add a description for the thread.");
   }
 
   const existing = await fetchCommunities();
   if (existing.some((c) => c.name === name || c.slug === name)) {
-    throw new Error("Ya existe un hilo con ese nombre.");
+    throw new Error("A thread with that name already exists.");
   }
 
   return platformApi.createCommunity({
@@ -180,7 +180,7 @@ export async function publishPost(input: NewPostInput): Promise<FeedPost> {
     ({ platformId, contentHash, txHash } = await anchorOpinion(content));
   } catch (e) {
     throw new PublishError(
-      (e as Error).message || "No se pudo anclar tu post on-chain.",
+      (e as Error).message || "Could not anchor your post on-chain.",
       "anchor",
     );
   }
@@ -206,8 +206,8 @@ export async function publishPost(input: NewPostInput): Promise<FeedPost> {
       if (attempt === maxAttempts - 1) {
         throw new PublishError(
           txHash
-            ? "Tu post quedó anclado on-chain pero no pudimos guardarlo en el feed. Reintentá con el mismo texto."
-            : (e as Error).message || "No se pudo guardar el post en el feed.",
+            ? "Your post was anchored on-chain but we could not save it to the feed. Retry with the same text."
+            : (e as Error).message || "Could not save the post to the feed.",
           "persist",
           { platformId, contentHash, txHash },
         );
@@ -215,7 +215,7 @@ export async function publishPost(input: NewPostInput): Promise<FeedPost> {
       await sleep(800 * (attempt + 1));
     }
   }
-  throw new PublishError("Error inesperado al publicar.", "persist", { platformId, contentHash, txHash });
+  throw new PublishError("Unexpected error while publishing.", "persist", { platformId, contentHash, txHash });
 }
 
 /** Un tweet (o respuesta) por id — el post padre de un hilo. */
@@ -250,7 +250,7 @@ export async function publishReply(input: { parentId: string; content: string })
  * Devuelve la cuenta actualizada. El nullifier nunca se expone; el server solo lo dedup-ea. */
 export async function resonatePost(postId: string): Promise<number> {
   const cred = loadAnyCredential();
-  if (!cred) throw new Error("necesitas_verificarte");
+  if (!cred) throw new Error("verification_required");
   const p = await generateResonateProof(cred, postId);
   const { count } = await platformApi.resonate(postId, { proof: p.proof, publicSignals: p.publicSignals });
   setResonatedLocally(postId, true);
@@ -260,7 +260,7 @@ export async function resonatePost(postId: string): Promise<number> {
 /** Quita tu Resuena (regenera la prueba → mismo nullifier → baja autorizada). */
 export async function unresonatePost(postId: string): Promise<number> {
   const cred = loadAnyCredential();
-  if (!cred) throw new Error("necesitas_verificarte");
+  if (!cred) throw new Error("verification_required");
   const p = await generateResonateProof(cred, postId);
   const { count } = await platformApi.unresonate(postId, { proof: p.proof, publicSignals: p.publicSignals });
   setResonatedLocally(postId, false);

@@ -1,18 +1,17 @@
-// Escaneo de cara en vivo (getUserMedia) + challenge para elicitar vivacidad.
-// Captura varios frames; el liveness real lo evalúa el backend (parpadeo/giro).
+// Live face scan (getUserMedia) + liveness challenges.
 import { useEffect, useRef, useState } from "react";
 import { Button } from "../components/ui/Button";
 
 const CHALLENGES = [
-  "Mirá a la cámara",
-  "Parpadeá un par de veces",
-  "Girá la cabeza despacio a un lado y al otro",
+  "Look at the camera",
+  "Blink a few times",
+  "Slowly turn your head side to side",
 ];
 
 export function FaceScan({ onCaptured }: { onCaptured: (frames: Blob[]) => void }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const [status, setStatus] = useState("Iniciando cámara…");
+  const [status, setStatus] = useState("Starting camera…");
   const [prompt, setPrompt] = useState("");
   const [scanning, setScanning] = useState(false);
 
@@ -33,9 +32,9 @@ export function FaceScan({ onCaptured }: { onCaptured: (frames: Blob[]) => void 
           videoRef.current.srcObject = stream;
           await videoRef.current.play();
         }
-        setStatus("Cámara lista");
+        setStatus("Camera ready");
       } catch (e) {
-        setStatus("No se pudo acceder a la cámara: " + (e as Error).message);
+        setStatus("Could not access camera: " + (e as Error).message);
       }
     })();
     return () => {
@@ -61,23 +60,23 @@ export function FaceScan({ onCaptured }: { onCaptured: (frames: Blob[]) => void 
       await new Promise((r) => setTimeout(r, 420));
       frames.push(await grabFrame());
     }
-    setPrompt("Procesando…");
+    setPrompt("Processing…");
     streamRef.current?.getTracks().forEach((t) => t.stop());
     onCaptured(frames);
   }
 
   return (
     <section className="bh-card">
-      <p className="bh-eyebrow">Paso 3 de 3</p>
-      <h2 className="bh-h2">Escaneo de cara</h2>
+      <p className="bh-eyebrow">Step 3 of 3</p>
+      <h2 className="bh-h2">Face scan</h2>
       <p className="bh-sub">{status}</p>
 
       <div className="bh-banner bh-banner--info">
-        <strong>Para validar tu rostro:</strong>
+        <strong>To validate your face:</strong>
         <ul className="bh-list">
-          <li>🔆 Buscá <strong>buena iluminación</strong>, de frente — evitá el contraluz y las sombras.</li>
-          <li>🎯 Centrá tu <strong>cara en el cuadro</strong>, a una distancia media (ni muy cerca ni lejos).</li>
-          <li>🙂 Sin lentes oscuros ni gorra, y seguí las indicaciones que aparecen abajo.</li>
+          <li>🔆 Use <strong>good front lighting</strong> — avoid backlight and harsh shadows.</li>
+          <li>🎯 Center your <strong>face in the frame</strong> at a medium distance.</li>
+          <li>🙂 No dark glasses or hat; follow the prompts below.</li>
         </ul>
       </div>
 
@@ -85,7 +84,7 @@ export function FaceScan({ onCaptured }: { onCaptured: (frames: Blob[]) => void 
       {prompt && <p className="bh-note" style={{ fontWeight: 600, color: "var(--color-text)" }}>{prompt}</p>}
       <div className="bh-actions">
         <Button disabled={scanning} onClick={runScan}>
-          {scanning ? "Escaneando…" : "Iniciar escaneo"}
+          {scanning ? "Scanning…" : "Start scan"}
         </Button>
       </div>
     </section>

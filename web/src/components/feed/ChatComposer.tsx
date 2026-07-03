@@ -9,8 +9,8 @@ interface ChatComposerProps {
 
 export function ChatComposer({
   onSend,
-  placeholder = "Escribí un mensaje…",
-  sendLabel = "Enviar",
+  placeholder = "Write a message…",
+  sendLabel = "Send",
 }: ChatComposerProps) {
   const [content, setContent] = useState("");
   const [busy, setBusy] = useState(false);

@@ -248,6 +248,6 @@ export function ArticleEditorPage() {
 
 function errMsg(e: unknown, needVerify: string): string {
   const m = (e as Error).message;
-  if (m === "necesitas_verificarte") return needVerify;
+  if (m === "verification_required") return needVerify;
   return m;
 }

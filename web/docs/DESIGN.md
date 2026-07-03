@@ -1,116 +1,113 @@
 # Design system — beHuman web
 
-> Referencia visual: [zk.me](https://www.zk.me/) — **inspiración**, no copia literal.
-> Identidad propia: proof of personhood + Stellar + plataforma de opinión verificada.
+> Visual reference: [zk.me](https://www.zk.me/) — **inspiration**, not literal copy.
+> Own identity: proof of personhood + Stellar + verified opinion platform.
 
-## Principios
+## Principles
 
-1. **Monocromo + acento** — negro profundo, texto blanco, naranja `#f97316` para CTAs y highlights.
-2. **Motion con propósito** — el hero reacciona al pointer; el resto usa reveals suaves.
-3. **Accesibilidad** — `prefers-reduced-motion` desactiva trail y parallax; contraste AA en texto principal.
-4. **Sin embeds externos** — no Unicorn Studio; canvas/CSS propio.
+1. **Monochrome + accent** — deep black, white text, orange `#f97316` for CTAs and highlights.
+2. **Purposeful motion** — hero reacts to pointer; rest uses soft reveals.
+3. **Accessibility** — `prefers-reduced-motion` disables trail and parallax; AA contrast on main text.
+4. **No external embeds** — no Unicorn Studio; own canvas/CSS.
 
-## Paleta (CSS variables)
+## Palette (CSS variables)
 
-Definidas en `src/styles/tokens.css`:
+Defined in `src/styles/tokens.css`:
 
-| Token | Valor | Uso |
+| Token | Value | Use |
 |-------|-------|-----|
-| `--color-bg` | `#0a0a0a` | Fondo principal |
+| `--color-bg` | `#0a0a0a` | Main background |
 | `--color-bg-deep` | `#000000` | Vignette / footer |
 | `--color-accent` | `#f97316` | Headline italic, labels, CTAs |
 | `--color-accent-bright` | `#fb923c` | Hover, stats |
-| `--color-text` | `#ffffff` | Texto primario |
-| `--color-text-muted` | `#a3a3a3` | Lead, celdas tabla |
+| `--color-text` | `#ffffff` | Primary text |
+| `--color-text-muted` | `#a3a3a3` | Lead, table cells |
 | `--color-border` | `rgba(255,255,255,0.12)` | Glass cards, nav |
 
-## Tipografía
+## Typography
 
-| Rol | Fuente | Fallback |
+| Role | Font | Fallback |
 |-----|--------|----------|
 | UI / marketing | Plus Jakarta Sans | system-ui |
-| Snippets ZK | JetBrains Mono | monospace |
+| ZK snippets | JetBrains Mono | monospace |
 
-Cargadas vía Google Fonts en `index.html`.
+Loaded via Google Fonts in `index.html`.
 
-## Hero interactivo
+## Interactive hero
 
-Equivalente simplificado al embed Unicorn Studio de zk.me:
+Simplified equivalent to zk.me Unicorn Studio embed:
 
-| Capa zk.me | Implementación beHuman |
+| zk.me layer | beHuman implementation |
 |------------|------------------------|
-| `mouseDraw` (trail) | `usePointerTrail` + círculos fading en canvas |
-| `glyphDither` / parallax | Dot-grid CSS con `transform` según pointer |
-| Caustics / beam / gradient | 3 orbes radiales en canvas con `usePointerSpring` |
-| Animación ambiental | `sin(time)` drift cuando hay motion |
+| `mouseDraw` (trail) | `usePointerTrail` + fading circles on canvas |
+| `glyphDither` / parallax | CSS dot-grid with pointer-based `transform` |
+| Caustics / beam / gradient | 3 radial orbs on canvas with `usePointerSpring` |
+| Ambient animation | `sin(time)` drift when motion enabled |
 
 ### Hooks
 
-- `usePointerSpring` — posición normalizada 0–1 con inercia (`strength` default 0.08).
-- `usePointerTrail` — cola de puntos con `life` decreciente.
-- `useReducedMotion` — lee `prefers-reduced-motion`.
+- `usePointerSpring` — normalized 0–1 position with inertia (`strength` default 0.08).
+- `usePointerTrail` — point queue with decreasing `life`.
+- `useReducedMotion` — reads `prefers-reduced-motion`.
 
-### Fallback reduced motion
+### Reduced motion fallback
 
-- Orbes centrados estáticos (sin trail, sin parallax en grid).
-- Marquee de stack → wrap estático.
+- Static centered orbs (no trail, no grid parallax).
+- Stack marquee → static wrap.
 
-## Componentes UI
+## UI components
 
-| Variante | Uso |
+| Variant | Use |
 |----------|-----|
-| `Button` primary | CTA principal (outline naranja glow) |
-| `Button` secondary | Acciones secundarias (glass blanco) |
-| `Button` ghost | Nav compacto (fill naranja, texto negro) |
-| `Badge` | Pill uppercase sobre hero |
+| `Button` primary | Main CTA (orange glow outline) |
+| `Button` secondary | Secondary actions (white glass) |
+| `Button` ghost | Compact nav (orange fill, black text) |
+| `Badge` | Uppercase pill on hero |
 
-## Secciones landing (slice 1)
+## Landing sections (slice 1)
 
-1. **Hero** — qué es beHuman, proof of personhood, CTAs, marquee stack.
-2. **Arquitectura** — CAPA 1 (KYC-ZK) + CAPA 2 (plataforma), puente `is_verified`.
-3. **Flujo KYC** — 4 fases vault: emisión → prueba → verificación → consumo.
-4. **Plataforma** — ancla on-chain, contenido off-chain, seudónimo estable.
-5. **Curaduría** — agente IA + moderación humana, principio anti-censura.
-6. **Stats** — métricas de diseño del protocolo.
-7. **Compare** — 7 filas tradicional vs beHuman.
+1. **Hero** — what beHuman is, proof of personhood, CTAs, stack marquee.
+2. **Architecture** — LAYER 1 (KYC-ZK) + LAYER 2 (platform), bridge `is_verified`.
+3. **KYC flow** — 4 vault phases: issuance → proof → verification → consumption.
+4. **Platform** — on-chain anchor, off-chain content, stable pseudonym.
+5. **Curation** — AI agent + human moderation, anti-censorship principle.
+6. **Stats** — protocol design metrics.
+7. **Compare** — 7 rows traditional vs beHuman.
 
-## Responsive (obligatorio)
+## Responsive (required)
 
-**Regla de proyecto:** todo componente y sección debe funcionar en móvil, tablet y desktop.
+**Project rule:** every component and section must work on mobile, tablet, and desktop.
 
 ### Breakpoints (`tokens.css`)
 
-| Token | Valor | Uso típico |
+| Token | Value | Typical use |
 |-------|-------|------------|
-| `--bp-sm` | 480px | CTAs apilados → fila; texto corto en nav |
-| `--bp-md` | 768px | Grids 2 cols; nav desktop; stats 4 cols |
-| `--bp-lg` | 1024px | Layouts amplios |
-| `--bp-xl` | 1100px | Flujo KYC 4 cols; nav links espaciados |
+| `--bp-sm` | 480px | Stacked → row CTAs; short nav text |
+| `--bp-md` | 768px | 2-col grids; desktop nav; 4-col stats |
+| `--bp-lg` | 1024px | Wide layouts |
+| `--bp-xl` | 1100px | 4-col KYC flow; spaced nav links |
 
-Enfoque **mobile-first**: estilos base para pantallas pequeñas; `@media (min-width: …)` para escalar.
+**Mobile-first** approach: base styles for small screens; `@media (min-width: …)` to scale.
 
-### Patrones
+### Patterns
 
-- **Gutter / secciones:** `clamp()` en `--space-gutter` y `--space-section`.
-- **Tipografía:** `clamp()` en títulos y leads; evitar tamaños fijos en copy largo.
-- **Nav:** menú hamburguesa `<1100px` (links desktop solo en pantallas anchas); panel desplegable; wallet abreviado en `<640px`.
-- **Hero:** `100svh`, safe-area insets, CTAs full-width en móvil; marquee con `contain: strict`.
-- **Tablas (Compare):** cards apiladas en móvil; grid con `minmax(0,1fr)` en desktop.
-- **Grids:** 1 col → 2 → 3/4 según sección; nunca depender solo de scroll horizontal.
-- **Código inline:** `overflow-wrap: anywhere` + `pre-wrap` en snippets largos.
-- **Anclas:** `scroll-padding-top` compensa nav fija.
-- **Overflow global:** `overflow-x: clip` en `html`, `body`, `#root`, `main` como red de seguridad.
+- **Gutter / sections:** `clamp()` in `--space-gutter` and `--space-section`.
+- **Typography:** `clamp()` on titles and leads; avoid fixed sizes on long copy.
+- **Nav:** hamburger menu `<1100px` (desktop links only on wide screens); dropdown panel; abbreviated wallet `<640px`.
+- **Hero:** `100svh`, safe-area insets, full-width CTAs on mobile; marquee with `contain: strict`.
+- **Tables (Compare):** stacked cards on mobile; grid with `minmax(0,1fr)` on desktop.
+- **Grids:** 1 col → 2 → 3/4 per section; never rely only on horizontal scroll.
+- **Inline code:** `overflow-wrap: anywhere` + `pre-wrap` on long snippets.
+- **Anchors:** `scroll-padding-top` compensates fixed nav.
+- **Global overflow:** `overflow-x: clip` on `html`, `body`, `#root`, `main` as safety net.
 
 ### Safe areas
 
-`--safe-top` / `--safe-bottom` para notch y home indicator (iOS).
+`--safe-top` / `--safe-bottom` for notch and home indicator (iOS).
 
-## CTAs deshabilitados (intencional)
+## Disabled CTAs (intentional)
 
-- `Comenzar verificación` — pendiente flujo `@behuman/sdk`.
-- `Conectar wallet` — pendiente Stellar Wallets Kit.
+- `Start verification` — pending `@behuman/sdk` flow.
+- `Connect wallet` — pending Stellar Wallets Kit.
 
-Documentar en IMPLEMENTATION.md cuando se habiliten.
-
-
-Documentar en IMPLEMENTATION.md cuando se habiliten.
+Document in IMPLEMENTATION.md when enabled.

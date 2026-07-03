@@ -11,7 +11,7 @@ export function SiteFooter() {
       <ScrollReveal className="site-footer__inner">
         <p className="site-footer__message">{t.footer.message}</p>
 
-        <nav className="site-footer__nav" aria-label="Pie de página">
+        <nav className="site-footer__nav" aria-label="Footer">
           {t.footer.nav.map((link) => (
             <a key={link.href} href={link.href}>
               {link.label}

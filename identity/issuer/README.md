@@ -1,38 +1,38 @@
-# issuer · Issuer KYC (MOCK)
+# issuer · KYC Issuer (MOCK)
 
-Emisor de credenciales **de prueba**. Simula el proveedor que hace el KYC real off-chain y
-registra el `commitment` (`Poseidon(atributos, secret)`) en un **árbol Merkle** (atestación
-**Merkle-only**, sin firma EdDSA). La PII llega del cliente al matcher por HTTPS, se procesa
-en memoria y **no se persiste ni va on-chain**.
+**Test** credential issuer. Simulates the provider that performs real KYC off-chain and
+registers the `commitment` (`Poseidon(attributes, secret)`) in a **Merkle tree** (**Merkle-only**
+attestation, no EdDSA signature). PII arrives from client to matcher over HTTPS, processed
+in memory and **not persisted or sent on-chain**.
 
-> ⚠️ **Es un mock** — declarado como tal. No es un KYC real. Endurecido para testnet, no prod.
+> ⚠️ **This is a mock** — stated as such. Not real KYC. Hardened for testnet, not prod.
 
-## Seguridad (auditoría)
+## Security (audit)
 
-| Control | Estado |
+| Control | Status |
 |---|---|
-| `DEDUP_PEPPER` obligatorio en prod | Fail-fast si falta; dev usa pepper efímero + WARNING |
-| Persistencia de-dup + árbol | Upstash Redis opcional; fallback archivo con write atómico |
-| Verificación de commitment | **No verificable** server-side (secret privado del cliente) — ver `SECURITY:` en `src/index.ts` |
-| Sesión de enroll | `/verify-data` abre sesión; `/enroll` la consume (anti-replay) |
-| Rate limiting | `/enroll` y `/verify` por IP |
+| `DEDUP_PEPPER` required in prod | Fail-fast if missing; dev uses ephemeral pepper + WARNING |
+| De-dup + tree persistence | Optional Upstash Redis; file fallback with atomic write |
+| Commitment verification | **Not verifiable** server-side (client-private secret) — see `SECURITY:` in `src/index.ts` |
+| Enroll session | `/verify-data` opens session; `/enroll` consumes it (anti-replay) |
+| Rate limiting | `/enroll` and `/verify` per IP |
 | CORS | Configurable (`CORS_ORIGIN`), default `http://localhost:5173` |
-| Cotejo datos↔OCR | `STRICT_DATA_CHECK=true` por defecto |
-| `IDENTITY_PROVIDER=dev` en prod | Bloqueado al iniciar |
+| Data↔OCR cross-check | `STRICT_DATA_CHECK=true` by default |
+| `IDENTITY_PROVIDER=dev` in prod | Blocked at startup |
 
-Ver `identity/issuer/.env.example` para todas las variables.
+See `identity/issuer/.env.example` for all variables.
 
-## Uso
+## Usage
 
 ```bash
 npm install
-cp .env.example ../../.env   # o configurar DEDUP_PEPPER en el entorno
+cp .env.example ../../.env   # or configure DEDUP_PEPPER in environment
 npm run download-models -w @behuman/issuer
 npm run serve -w @behuman/issuer
 ```
 
-## Riesgos conocidos (mock)
+## Known risks (mock)
 
-- El issuer **no puede** recomputar `Poseidon(birthYear, countryCode, secret)` — confía en el cliente.
-- OCR heurístico: falsos positivos/negativos posibles; el gate real es biometría + liveness.
-- Rate limit en memoria: no protege entre réplicas sin sticky sessions / Redis.
+- Issuer **cannot** recompute `Poseidon(birthYear, countryCode, secret)` — trusts the client.
+- Heuristic OCR: false positives/negatives possible; real gate is biometrics + liveness.
+- In-memory rate limit: does not protect across replicas without sticky sessions / Redis.

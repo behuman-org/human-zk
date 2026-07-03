@@ -1,88 +1,88 @@
 # human
 
-> **KYC con Zero-Knowledge sobre Stellar** — *proof of personhood*: probás que sos una
-> persona real y **única** sin revelar quién sos. Monorepo del producto.
+> **Zero-Knowledge KYC on Stellar** — *proof of personhood*: prove you are a real, **unique**
+> person without revealing who you are. Product monorepo.
 >
-> Presentado en **[Stellar Hacks: Real-World ZK](https://dorahacks.io/hackathon/stellar-hacks-zk/detail)** — identity proofs verificados on-chain en Soroban.
+> Presented at **[Stellar Hacks: Real-World ZK](https://dorahacks.io/hackathon/stellar-hacks-zk/detail)** — identity proofs verified on-chain in Soroban.
 
-human tiene **tres capas**: **identidad** (KYC-ZK), **plataforma de opinión** verificada y
-**funding** ZK (crowdfunding anónimo). Una persona verifica su identidad una vez
-(off-chain con el issuer mock; la PII no va on-chain), obtiene registro on-chain vía
-`is_verified(address)` y un **`platformId`** anónimo (secret ZK) para publicar en la Capa 2.
+human has **three layers**: **identity** (KYC-ZK), a verified **opinion platform**, and
+**ZK funding** (anonymous crowdfunding). A person verifies their identity once
+(off-chain with the mock issuer; PII never goes on-chain), obtains on-chain registration via
+`is_verified(address)` and an anonymous **`platformId`** (ZK secret) to publish on Layer 2.
 
-📚 **La documentación, diseño y decisiones viven en la vault de Obsidian** (repo hermano
-`obsidian-vault-zk`). Este repo es **solo el código**. Ver [`docs/`](./docs/README.md).
+📚 **Documentation, design, and decisions live in the Obsidian vault** (sibling repo
+`obsidian-vault-zk`). This repo is **code only**. See [`docs/`](./docs/README.md).
 
 ---
 
-## 🗂️ Estructura del monorepo (por capas)
+## 🗂️ Monorepo structure (by layer)
 
 ```text
 human/
-├── identity/                 # ── CAPA 1 · KYC con ZK ──
-│   ├── circuits/             #   Circom — circuito kyc (BLS12-381)
+├── identity/                 # ── LAYER 1 · ZK KYC ──
+│   ├── circuits/             #   Circom — kyc circuit (BLS12-381)
 │   ├── contracts/            #   Soroban — kyc_verifier  ← is_verified(address)
-│   └── issuer/               #   mock issuer (Merkle-only, sin EdDSA)
+│   └── issuer/               #   mock issuer (Merkle-only, no EdDSA)
 │
-├── platform/                 # ── CAPA 2 · Plataforma de opinión ──
+├── platform/                 # ── LAYER 2 · Opinion platform ──
 │   ├── contracts/            #   Soroban — opinion_board (platformId + proof)
-│   ├── api/                  #   backend autenticado (Bearer) + curaduría
-│   └── curation/             #   agente moderador (Groq) + moderación humana
+│   ├── api/                  #   authenticated backend (Bearer) + curation
+│   └── curation/             #   moderator agent (Groq) + human moderation
 │
-├── funding/                  # ── CAPA 3 · Funding ZK (dev-only hoy) ──
+├── funding/                  # ── LAYER 3 · ZK Funding (dev-only today) ──
 │   ├── circuits/             #   funding_opinion.circom
 │   ├── contracts/            #   campaign_controller (Soroban)
-│   └── api/                  #   backend demo (FUNDING_PROVIDER=dev)
+│   └── api/                  #   demo backend (FUNDING_PROVIDER=dev)
 │
 ├── packages/
-│   ├── sdk/                  # cliente: prueba ZK + tx Stellar (compartido)
-│   └── shared/               # tipos TS compartidos (3 capas)
+│   ├── sdk/                  # client: ZK proof + Stellar tx (shared)
+│   └── shared/               # shared TS types (3 layers)
 │
-├── web/                      # React + Vite + TypeScript (frontend único)
+├── web/                      # React + Vite + TypeScript (single frontend)
 ├── scripts/                  # deploy_testnet.sh, e2e_demo.sh
-└── docs/                     # enlaza a la vault de Obsidian
+└── docs/                     # links to the Obsidian vault
 ```
 
-| Capa | Carpeta | Stack |
+| Layer | Folder | Stack |
 |---|---|---|
-| 1 · Identidad | `identity/circuits` · `identity/contracts/kyc_verifier` · `identity/issuer` | Circom+Groth16 (BLS12-381) · Rust/Soroban · TS |
-| 2 · Plataforma | `platform/contracts/opinion_board` · `platform/api` · `platform/curation` | Rust/Soroban · TS · TS + Groq API |
+| 1 · Identity | `identity/circuits` · `identity/contracts/kyc_verifier` · `identity/issuer` | Circom+Groth16 (BLS12-381) · Rust/Soroban · TS |
+| 2 · Platform | `platform/contracts/opinion_board` · `platform/api` · `platform/curation` | Rust/Soroban · TS · TS + Groq API |
 | 3 · Funding | `funding/contracts/campaign_controller` · `funding/api` · `funding/circuits` | Rust/Soroban · TS · Circom |
-| Compartido | `packages/sdk` · `packages/shared` · `web` | TypeScript · React+Vite |
+| Shared | `packages/sdk` · `packages/shared` · `web` | TypeScript · React+Vite |
 
-> 🌉 **Capa 1 → wallet:** `is_verified(address)` tras `verify_and_register` (nullifier global
-> `Poseidon(secret)`). **Capa 2 → plataforma:** `platformId` ZK vía `register_identity(proof,
-> public_inputs)` y `post(proof, public_inputs)` — no gatea por address de wallet.
+> 🌉 **Layer 1 → wallet:** `is_verified(address)` after `verify_and_register` (global nullifier
+> `Poseidon(secret)`). **Layer 2 → platform:** ZK `platformId` via `register_identity(proof,
+> public_inputs)` and `post(proof, public_inputs)` — not gated by wallet address.
 
 ---
 
 ## 🚀 Quickstart
 
 ```bash
-# Requisitos: Node 20+, Rust + wasm32-unknown-unknown, Stellar CLI, circom + snarkjs
-npm install                 # instala los workspaces JS (web, issuer, packages/*)
+# Requirements: Node 20+, Rust + wasm32-unknown-unknown, Stellar CLI, circom + snarkjs
+npm install                 # installs JS workspaces (web, issuer, packages/*)
 
-npm run dev                 # levanta el frontend React (web/)
-make contracts-build        # compila los contratos Soroban (3 capas)
-make circuit-compile        # compila el circuito Circom
+npm run dev                 # starts the React frontend (web/)
+make contracts-build        # compiles Soroban contracts (3 layers)
+make circuit-compile        # compiles the Circom circuit
 ```
 
-Ver targets disponibles en el [`Makefile`](./Makefile).
+See available targets in the [`Makefile`](./Makefile).
 
 ---
 
-## 🧱 Estado
+## 🧱 Status
 
-- [x] Estructura del monorepo (3 capas)
-- [x] **CAPA 1** — Circuito `kyc.circom`, contrato `kyc_verifier` (`update_root`, nullifier global)
-- [x] **CAPA 1** — Issuer mock endurecido (rate limit, CORS, Upstash opcional)
-- [x] **CAPA 2** — Contrato `opinion_board` (ZK `platformId`) + API autenticada + curaduría
-- [x] **CAPA 3** — Contrato + circuito + API/web en modo **dev** (integración real bloqueada)
-- [x] SDK + tipos compartidos (`packages/`)
-- [x] Frontend React con guard `/app/*`, storage cifrado, registro on-chain Pollar
-- [x] Deploy testnet + demo E2E (`scripts/`)
+- [x] Monorepo structure (3 layers)
+- [x] **LAYER 1** — `kyc.circom` circuit, `kyc_verifier` contract (`update_root`, global nullifier)
+- [x] **LAYER 1** — Hardened mock issuer (rate limit, CORS, optional Upstash)
+- [x] **LAYER 2** — `opinion_board` contract (ZK `platformId`) + authenticated API + curation
+- [x] **LAYER 3** — Contract + circuit + API/web in **dev** mode (real integration blocked)
+- [x] SDK + shared types (`packages/`)
+- [x] React frontend with `/app/*` guard, encrypted storage, Pollar on-chain registration
+- [x] Testnet deploy + E2E demo (`scripts/`)
 
-> MVP/demo — issuer mock, trusted setup de demo, funding real pendiente. Ver `CLAUDE.md`.
+> MVP/demo — mock issuer, demo trusted setup, real funding pending. See `CLAUDE.md`.
 
 ---
 

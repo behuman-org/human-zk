@@ -28,23 +28,23 @@ import { POLLAR_ENABLED } from "../identity/pollar";
 type Step = "connect" | "checking" | "already" | "consent" | "document" | "attributes" | "scan" | "processing" | "done" | "error";
 
 const REASON: Record<string, string> = {
-  already_enrolled: "Este documento ya fue validado (anti-Sybil). No puede crear otra identidad.",
-  face_mismatch: "La cara no coincide con la del documento.",
-  no_liveness_motion: "No se detectó vivacidad (parpadeo/giro).",
-  not_an_id_document: "La imagen no es un documento de identidad.",
-  no_face_in_document: "No se detecta cara en el documento.",
-  no_face_in_selfie: "No se detecta tu cara en el escaneo.",
-  data_mismatch: "Los datos declarados no coinciden con el DNI.",
-  document_unreadable: "No se pudo leer el documento (subí una foto más nítida).",
+  already_enrolled: "This document was already validated (anti-Sybil). Cannot create another identity.",
+  face_mismatch: "Face does not match the document.",
+  no_liveness_motion: "No liveness detected (blink/head turn).",
+  not_an_id_document: "Image is not an identity document.",
+  no_face_in_document: "No face detected on the document.",
+  no_face_in_selfie: "No face detected in the scan.",
+  data_mismatch: "Declared data does not match the ID.",
+  document_unreadable: "Could not read document (upload a sharper photo).",
 };
 
 const DATA_REASON: Record<string, string> = {
-  doc_number: "el número de documento",
-  birth_year: "el año de nacimiento",
-  country: "el país",
-  document_unreadable: "no se pudo leer el documento",
-  not_an_id_document: "no parece un documento de identidad",
-  no_face_in_document: "no se detecta la cara en el documento",
+  doc_number: "document number",
+  birth_year: "year of birth",
+  country: "country",
+  document_unreadable: "document could not be read",
+  not_an_id_document: "does not look like an identity document",
+  no_face_in_document: "no face on document",
 };
 
 export function KycFlow(props: { onDone?: () => void; mode?: "wallet" | "credential" } = {}) {
@@ -100,16 +100,16 @@ function KycFlowCore({
     setAttrs(a);
     if (!doc) return setStep("document");
     setStep("processing");
-    setMsg("Cotejando tus datos con el DNI…");
+    setMsg("Matching your details with the ID…");
     try {
       const r = await verifyDocumentData(doc, a);
       if (r.ok) return setStep("scan");
       const why = (r.mismatches.length ? r.mismatches : r.reasons).map((x) => DATA_REASON[x] ?? x).join(", ");
       setDoc(null);
-      setBounce(`El DNI no coincide con tus datos (${why}). Subí un documento válido cuyos datos coincidan.`);
+      setBounce(`ID does not match your details (${why}). Upload a valid document with matching data.`);
       setStep("document");
     } catch (e) {
-      fail("No se pudo cotejar el documento: " + (e as Error).message);
+      fail("Could not match document: " + (e as Error).message);
     }
   }
 
@@ -128,7 +128,7 @@ function KycFlowCore({
       }
       setStep(already ? "already" : "consent");
     } catch (e) {
-      fail("No se pudo conectar la wallet: " + (e as Error).message);
+      fail("Could not connect wallet: " + (e as Error).message);
     }
   }
 
@@ -137,19 +137,19 @@ function KycFlowCore({
     frames: Blob[],
     signerAddress: string,
   ): Promise<void> {
-    if (!doc || !attrs) return fail("Faltan datos del flujo.");
+    if (!doc || !attrs) return fail("Missing flow data.");
     setStep("processing");
 
     try {
       let cred: StoredCredential | null = await loadCredentialAsync(attrs.docId);
       if (cred) {
-        setMsg("Recuperando tu credencial guardada en este dispositivo…");
+        setMsg("Recovering credential saved on this device…");
       } else {
-        setMsg("Generando tu secreto e identidad (en el dispositivo)…");
+        setMsg("Generating your secret and identity (on device)…");
         const secret = randomSecret();
         const commitment = await computeCommitment(attrs, secret);
 
-        setMsg("Validando documento + cara y registrando en el issuer…");
+        setMsg("Validating document + face and enrolling with issuer…");
         const en = await enroll(doc, frames, commitment, {
           docId: attrs.docId,
           birthYear: attrs.birthYear,
@@ -162,13 +162,13 @@ function KycFlowCore({
             cred = await loadCredentialAsync(attrs.docId);
             if (!cred) {
               return fail(
-                "Este documento ya pasó la validación biométrica en un intento anterior, " +
-                  "pero el registro on-chain no terminó y no encontramos tu credencial en este navegador. " +
-                  "En local: pará el issuer y ejecutá `rm identity/issuer/.issuer-state.json`, " +
-                  "luego reiniciá el matcher. También podés probar otra pestaña si no cerraste la anterior.",
+                "This document already passed biometric validation in a previous attempt, " +
+                  "but on-chain registration did not finish and we could not find your credential in this browser. " +
+                  "Locally: stop the issuer and run `rm identity/issuer/.issuer-state.json`, " +
+                  "then restart the matcher. You can also try another tab if you did not close the previous one.",
               );
             }
-            setMsg("Recuperando credencial de un intento anterior…");
+            setMsg("Recovering credential from a previous attempt…");
           } else {
             return fail(en.reasons.map((r) => REASON[r] ?? r).join(" "));
           }
@@ -184,9 +184,9 @@ function KycFlowCore({
         }
       }
 
-      if (!cred) return fail("No se pudo obtener la credencial de identidad.");
+      if (!cred) return fail("Could not obtain identity credential.");
 
-      setMsg("Generando la prueba ZK en tu dispositivo (la PII no sale)…");
+      setMsg("Generating ZK proof on your device (PII stays local)…");
       const gen = await generateProof(
         cred.attributes,
         cred.secret,
@@ -196,27 +196,27 @@ function KycFlowCore({
       );
       setLastProof(gen);
 
-      setMsg("Inicializando el registro on-chain si hace falta…");
+      setMsg("Initializing on-chain registration if needed…");
       await initIfNeeded(signerAddress, cred.issuerRoot);
 
-      setMsg("Registrando en Stellar…");
+      setMsg("Registering on Stellar…");
       let hash: string;
       try {
         hash = await verifyAndRegister(signerAddress, gen);
       } catch (e) {
         if (e instanceof ContractError && e.code === 3) {
-          return fail("Este humano ya tiene identidad (rechazo on-chain por nullifier).");
+          return fail("This human already has an identity (on-chain nullifier rejection).");
         }
         throw e;
       }
       setTxHash(hash);
       saveRegistrationAddress(signerAddress);
 
-      setMsg("Confirmando on-chain…");
+      setMsg("Confirming on-chain…");
       const onChain = await isVerified(signerAddress);
       setVerified(onChain);
       if (!onChain) {
-        return fail("El registro on-chain no se confirmó. Reintentá o contactá soporte.");
+        return fail("On-chain registration was not confirmed. Retry or contact support.");
       }
       setStep("done");
     } catch (e) {
@@ -229,21 +229,21 @@ function KycFlowCore({
     // bloqueamos Capa 2 — no marcamos verified=true solo con credencial local.
     if (!POLLAR_ENABLED || !pollar) {
       return fail(
-        "El registro on-chain requiere Pollar configurado. Conectá una wallet externa en /login.",
+        "On-chain registration requires Pollar. Connect an external wallet at /login.",
       );
     }
     if (!pollar.verified || !pollar.isAuthenticated) {
-      return fail("Tu sesión de Pollar no está confirmada. Volvé a iniciar sesión con email.");
+      return fail("Your Pollar session is not confirmed. Sign in again with email.");
     }
     const pollarAddr = pollar.walletAddress?.trim();
     if (!pollarAddr) {
       return fail(
-        "Tu wallet de Pollar aún no está lista. Esperá a que termine de crearse o reconectá.",
+        "Your Pollar wallet is not ready yet. Wait until it is created or reconnect.",
       );
     }
     if (!pollar.signTx) {
       return fail(
-        "Pollar no expone firma de transacciones en esta versión. Usá “Conectar mi wallet” para registrarte on-chain.",
+        "Pollar does not expose transaction signing in this version. Use “Connect my wallet” for on-chain registration.",
       );
     }
     await ensureFunded(pollarAddr).catch(() => {});
@@ -253,20 +253,20 @@ function KycFlowCore({
 
   async function process(frames: Blob[]) {
     if (mode === "credential") return processCredentialWithPollar(frames);
-    if (!address) return fail("Faltan datos del flujo.");
+    if (!address) return fail("Missing flow data.");
     await runOnChainRegistration(frames, address);
   }
 
   async function retryRegister() {
     if (!address || !lastProof) return;
-    setNullifierMsg("Reenviando la misma prueba…");
+    setNullifierMsg("Resubmitting the same proof…");
     try {
       await verifyAndRegister(address, lastProof);
-      setNullifierMsg("(inesperado) se registró de nuevo.");
+      setNullifierMsg("(unexpected) registered again.");
     } catch (e) {
       setNullifierMsg(
         e instanceof ContractError && e.code === 3
-          ? "✅ Rechazado on-chain: " + e.message
+          ? "✅ Rejected on-chain: " + e.message
           : "Error: " + (e as Error).message,
       );
     }
@@ -275,17 +275,17 @@ function KycFlowCore({
   if (step === "connect")
     return (
       <section className="bh-card">
-        <p className="bh-eyebrow">Verificación de identidad</p>
-        <h2 className="bh-h2">Conectá tu wallet</h2>
+        <p className="bh-eyebrow">Identity verification</p>
+        <h2 className="bh-h2">Connect your wallet</h2>
         <p className="bh-sub">
-          Vas a verificar que sos una persona real y única. Tu identidad queda registrada de
-          forma anónima; nunca publicamos tus datos.
+          You will verify you are a real, unique person. Your identity is registered anonymously;
+          we never publish your personal data.
         </p>
         {!CONTRACT_ID && (
-          <p className="bh-note bh-note--err">⚠️ Falta configurar el contrato verificador.</p>
+          <p className="bh-note bh-note--err">⚠️ Verifier contract is not configured.</p>
         )}
         <div className="bh-actions">
-          <Button onClick={onConnect}>Conectar wallet</Button>
+          <Button onClick={onConnect}>Connect wallet</Button>
         </div>
       </section>
     );
@@ -293,24 +293,24 @@ function KycFlowCore({
   if (step === "checking")
     return (
       <section className="bh-card">
-        <h2 className="bh-h2">Un segundo…</h2>
-        <p className="bh-sub">Comprobando si esta wallet ya tiene una identidad verificada.</p>
+        <h2 className="bh-h2">One moment…</h2>
+        <p className="bh-sub">Checking whether this wallet already has a verified identity.</p>
       </section>
     );
 
   if (step === "already")
     return (
       <section className="bh-card">
-        <h2 className="bh-h2">✅ Ya estás verificado</h2>
+        <h2 className="bh-h2">✅ Already verified</h2>
         <p className="bh-sub">
-          Esta wallet <strong>ya tiene una identidad verificada</strong>. No hace falta validar
-          de nuevo: cada persona tiene una sola identidad.
+          This wallet <strong>already has a verified identity</strong>. No need to validate again:
+          one person, one identity.
         </p>
         <div className="bh-actions">
           {onDone ? (
-            <Button onClick={onDone}>Entrar a la app</Button>
+            <Button onClick={onDone}>Enter the app</Button>
           ) : (
-            <Button onClick={() => window.location.reload()}>Volver al inicio</Button>
+            <Button onClick={() => window.location.reload()}>Back to home</Button>
           )}
         </div>
       </section>
@@ -330,42 +330,42 @@ function KycFlowCore({
   if (step === "processing")
     return (
       <section className="bh-card">
-        <h2 className="bh-h2">Procesando…</h2>
+        <h2 className="bh-h2">Processing…</h2>
         <p className="bh-sub">{msg}</p>
-        <p className="bh-note">Puede pedirte confirmar la transacción en tu wallet.</p>
+        <p className="bh-note">You may need to confirm the transaction in your wallet.</p>
       </section>
     );
 
   if (step === "error")
     return (
       <section className="bh-card">
-        <h2 className="bh-h2">No pudimos verificarte</h2>
+        <h2 className="bh-h2">We could not verify you</h2>
         <p className="bh-sub">{error}</p>
         <div className="bh-actions">
-          <Button onClick={() => window.location.reload()}>Reintentar</Button>
+          <Button onClick={() => window.location.reload()}>Try again</Button>
         </div>
       </section>
     );
 
   return (
     <section className="bh-card">
-      <p className="bh-eyebrow">Listo</p>
-      <h2 className="bh-h2">{verified ? "✅ Sos un humano verificado" : "Registrado (confirmando…)"}</h2>
+      <p className="bh-eyebrow">Done</p>
+      <h2 className="bh-h2">{verified ? "✅ You are a verified human" : "Registered (confirming…)"}</h2>
       <p className="bh-sub">
-        Tu identidad quedó verificada de forma anónima. Ya podés participar sin revelar quién sos.
+        Your identity was verified anonymously. You can participate without revealing who you are.
       </p>
       {txHash && (
         <p className="bh-note">
           <a href={`https://stellar.expert/explorer/testnet/tx/${txHash}`} target="_blank" rel="noreferrer" className="bh-back">
-            Ver el comprobante on-chain
+            View on-chain receipt
           </a>
         </p>
       )}
       <div className="bh-actions">
-        {onDone && verified && <Button onClick={onDone}>Entrar a la app</Button>}
+        {onDone && verified && <Button onClick={onDone}>Enter the app</Button>}
         {mode === "wallet" && lastProof && (
           <Button variant="ghost" onClick={retryRegister}>
-            Probar el candado anti-duplicados
+            Test anti-duplicate lock
           </Button>
         )}
       </div>

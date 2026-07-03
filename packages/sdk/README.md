@@ -1,41 +1,41 @@
-# @behuman/sdk · Cliente / Prover
+# @behuman/sdk · Client / Prover
 
-Lógica compartida que orquesta el flujo del lado del usuario:
-**credencial → genera la prueba ZK (en el navegador, WASM) → arma y envía la tx Stellar**.
-La consume el frontend `web/` y los scripts de demo.
+Shared logic orchestrating the user-side flow:
+**credential → generates ZK proof (in browser, WASM) → builds and sends Stellar tx**.
+Consumed by `web/` frontend and demo scripts.
 
-> 📐 Ver `Flujo de KYC` (Fases 2 y 3) en la vault. El `secret` ZK nunca sale del dispositivo;
-> la PII del gate va al issuer mock (no on-chain).
+> 📐 See `Flujo de KYC` (Phases 2 and 3) in the vault. ZK `secret` never leaves the device;
+> gate PII goes to mock issuer (not on-chain).
 
-## API (Capa 1 · KYC)
+## API (Layer 1 · KYC)
 
-| Función | Qué hace |
+| Function | What it does |
 |---|---|
-| `generateProof(credential, address)` | Witness + prueba Groth16 BLS12-381 (`kyc.circom`). |
-| `nullifierField(secret)` | `Poseidon(secret)` — nullifier global anti-Sybil. |
-| `addressHashField(address)` | Hash de address para binding (public input). |
-| `verifyProofLocally(gen, vk)` | Sanity check off-chain con snarkjs. |
-| `encodeVerificationKey(vk)` | VK snarkjs → ScVal Soroban. |
-| `initVerifier(cfg, signerSecret, issuerRoot, vk)` | Tx `init` del contrato. |
-| `buildVerifyArgs(address, gen)` | ScVal para `verify_and_register`. |
-| `verifyAndRegister(cfg, signerSecret, gen)` | Firma y envía registro on-chain. |
-| `isVerified(cfg, address)` | Consulta `is_verified` por simulación. |
-| `encodeProof(proof)` / `fieldTo32` / `g1ToBytes` / `g2ToBytes` | Encoding BLS12-381 para Soroban. |
+| `generateProof(credential, address)` | Witness + Groth16 BLS12-381 proof (`kyc.circom`). |
+| `nullifierField(secret)` | `Poseidon(secret)` — global anti-Sybil nullifier. |
+| `addressHashField(address)` | Address hash for binding (public input). |
+| `verifyProofLocally(gen, vk)` | Off-chain sanity check with snarkjs. |
+| `encodeVerificationKey(vk)` | snarkjs VK → Soroban ScVal. |
+| `initVerifier(cfg, signerSecret, issuerRoot, vk)` | Contract `init` tx. |
+| `buildVerifyArgs(address, gen)` | ScVal for `verify_and_register`. |
+| `verifyAndRegister(cfg, signerSecret, gen)` | Signs and sends on-chain registration. |
+| `isVerified(cfg, address)` | Queries `is_verified` via simulation. |
+| `encodeProof(proof)` / `fieldTo32` / `g1ToBytes` / `g2ToBytes` | BLS12-381 encoding for Soroban. |
 
-Constante: `PUBLIC_SIGNALS_ORDER = ["commitment", "nullifier", "issuerRoot", "addressHash"]`.
+Constant: `PUBLIC_SIGNALS_ORDER = ["commitment", "nullifier", "issuerRoot", "addressHash"]`.
 
-## API (Capa 3 · Funding)
+## API (Layer 3 · Funding)
 
-| Módulo | Qué hace |
+| Module | What it does |
 |---|---|
-| `fundingOpinion.ts` | `generateFundingOpinionProof`, `verifyFundingOpinionProof`, binding scope/nullifier. |
-| `defindex.ts` / `trustlesswork.ts` | Clientes real/dev (solo dev operativo en la API hoy). |
-| `fundingAuth.ts` | Firmas de acciones de validadores (release 2-de-3). |
+| `fundingOpinion.ts` | `generateFundingOpinionProof`, `verifyFundingOpinionProof`, scope/nullifier binding. |
+| `defindex.ts` / `trustlesswork.ts` | Real/dev clients (only dev operational in API today). |
+| `fundingAuth.ts` | Validator action signatures (2-of-3 release). |
 
 ## Stack
 
 - `snarkjs` + Circom WASM (`--prime bls12381`).
-- `@stellar/stellar-sdk` para transacciones Soroban.
+- `@stellar/stellar-sdk` for Soroban transactions.
 
 ```bash
 npm install

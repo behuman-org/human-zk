@@ -33,7 +33,7 @@ export function daysLeft(deadline: number): number {
   return Math.max(0, Math.ceil((deadline - Date.now()) / (24 * 3600 * 1000)));
 }
 
-export const fmtAmount = (n: string | number, locale = "es-AR") =>
+export const fmtAmount = (n: string | number, locale = "en-US") =>
   Number(n).toLocaleString(locale === "es" ? "es-AR" : "en-US", { maximumFractionDigits: 2 });
 
 export const fmtApy = (apy?: number) => (typeof apy === "number" ? `${(apy * 100).toFixed(1)}%` : "—");

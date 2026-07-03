@@ -82,7 +82,7 @@ export function SiteNav() {
       <nav
         id="site-nav-mobile"
         className={`site-nav__mobile ${menuOpen ? "is-open" : ""}`}
-        aria-label="Principal móvil"
+        aria-label="Mobile navigation"
         aria-hidden={!menuOpen}
       >
         <div className="site-nav__mobile-glass" aria-hidden="true">

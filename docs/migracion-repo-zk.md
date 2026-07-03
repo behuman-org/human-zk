@@ -1,18 +1,18 @@
-# Migración a `behuman-org/human-zk`
+# Migration to `behuman-org/human-zk`
 
-## Estado (jul 2026)
+## Status (Jul 2026)
 
-| Item | Valor |
+| Item | Value |
 |------|-------|
-| Carpeta local | `beHuman/` |
-| Remote git | **`git@github.com:behuman-org/human-zk.git`** |
-| Repo anterior | `behuman-org/human` — archivado; superseded por `human-zk` |
-| Rama de trabajo | `fix/security-audit-hardening` |
+| Local folder | `beHuman/` |
+| Git remote | **`git@github.com:behuman-org/human-zk.git`** |
+| Previous repo | `behuman-org/human` — archived; superseded by `human-zk` |
+| Working branch | `fix/security-audit-hardening` |
 | Hackathon | **Stellar Hacks: Real-World ZK** |
 
 ---
 
-## Remote local
+## Local remote
 
 ```bash
 cd ~/Escritorio/projects/beHuman
@@ -22,43 +22,43 @@ git remote -v
 
 ---
 
-## Primer push (repo vacío en GitHub)
+## First push (empty repo on GitHub)
 
-Con commits listos en la rama actual:
+With commits ready on the current branch:
 
 ```bash
 git push -u origin fix/security-audit-hardening:main
-# o, si mergeaste a main:
+# or, if merged to main:
 git push -u origin main
 ```
 
 ---
 
-## Qué NO subir
+## What NOT to upload
 
-- `.env` (secretos: `GROQ_API_KEY`, `DEDUP_PEPPER`, claves Stellar)
+- `.env` (secrets: `GROQ_API_KEY`, `DEDUP_PEPPER`, Stellar keys)
 - `.deploy/*.secret`
 - `identity/issuer/.issuer-state.json`
 - `platform/api/.platform-store.json`
-- `node_modules/`, artefactos locales de `.deploy`
+- `node_modules/`, local `.deploy` artifacts
 
-Verificar `.gitignore` antes del push.
-
----
-
-## Referencias actualizadas en código
-
-- `web/src/i18n/locales/es.ts` y `en.ts` → footer GitHub
-- `README.md` → enlace al repo
-- `identity/AGENTS.md` → repo canónico
+Verify `.gitignore` before push.
 
 ---
 
-## Después del push
+## Updated references in code
 
-1. `docs/hackathon-real-world-zk.md` — checklist DoraHacks.
-2. Video demo 2–3 min.
-3. BUIDL en [DoraHacks](https://dorahacks.io/hackathon/stellar-hacks-zk/detail) con  
+- `web/src/i18n/locales/es.ts` and `en.ts` → GitHub footer
+- `README.md` → repo link
+- `identity/AGENTS.md` → canonical repo
+
+---
+
+## After push
+
+1. `docs/hackathon-real-world-zk.md` — DoraHacks checklist.
+2. 2–3 min demo video.
+3. BUIDL on [DoraHacks](https://dorahacks.io/hackathon/stellar-hacks-zk/detail) with  
    `https://github.com/behuman-org/human-zk`.
-4. Vercel: reconectar deploy al nuevo repo (si aplica).
-5. Opcional: README en `behuman-org/human` apuntando a `human-zk`.
+4. Vercel: reconnect deploy to the new repo (if applicable).
+5. Optional: README in `behuman-org/human` pointing to `human-zk`.

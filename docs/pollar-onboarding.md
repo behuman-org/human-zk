@@ -1,74 +1,73 @@
-# Pollar — onboarding fácil (crear wallet con email) sin romper el anonimato
+# Pollar — easy onboarding (create wallet with email) without breaking anonymity
 
-> Rama: `pollar-onboarding`. Pollar (`@pollar/react`) se integra **solo** como una forma
-> amigable de que un usuario sin wallet cree una cuenta Stellar con su email. **No firma nada**
-> de beHuman y **no participa del anonimato ZK**, que es la prioridad absoluta.
+> Branch: `pollar-onboarding`. Pollar (`@pollar/react`) integrates **only** as a friendly way
+> for a user without a wallet to create a Stellar account with email. It **does not sign anything**
+> for beHuman and **does not participate in ZK anonymity**, which is the absolute priority.
 
-## Por qué Pollar es custodial (y por qué no puede sostener el anonimato)
+## Why Pollar is custodial (and why it cannot sustain anonymity)
 
-El login por email de Pollar genera y guarda la clave en su servidor y firma server-side. Es
-**custodial**: Pollar sabe `email → wallet`. Por eso el anonimato de beHuman **no depende** de
-la wallet de Pollar. La raíz del anonimato (el `secret`) se crea y vive solo en el dispositivo.
+Pollar email login generates and stores the key on their server and signs server-side. It is
+**custodial**: Pollar knows `email → wallet`. That is why beHuman anonymity **does not depend on**
+the Pollar wallet. The root of anonymity (the `secret`) is created and lives only on the device.
 
-## El modelo: identidad pública (Pollar) ⟂ identidad anónima (ZK), con firewall
+## The model: public identity (Pollar) ⟂ anonymous identity (ZK), with firewall
 
 ```
-[Email] --Pollar(custodial)--> [Wallet pública G...]      ← identidad de ENTRADA (opcional)
-                                     ⟂  (firewall: sin link)
-[secret client-side] --Poseidon(secret, scope)--> [platformId]   ← identidad ANÓNIMA
-        └ credencial ZK (matcher) ─ posts/opiniones/donaciones con wallets EFÍMERAS
+[Email] --Pollar(custodial)--> [Public wallet G...]      ← ENTRY identity (optional)
+                                     ⟂  (firewall: no link)
+[client-side secret] --Poseidon(secret, scope)--> [platformId]   ← ANONYMOUS identity
+        └ ZK credential (matcher) ─ posts/opinions/donations with EPHEMERAL wallets
 ```
 
-- **Pollar = solo crear la wallet.** Tras el login por email obtenemos `walletAddress` y nada
-  más. beHuman **no la usa para firmar** ni la guarda junto al `platformId`.
-- **La credencial ZK** (del matcher: DNI + cara → `secret` + camino Merkle) se genera
-  **client-side** (`web/src/kyc/credentialStore.ts`) y es lo que habilita la participación.
-- **Las acciones anónimas** (posts, opiniones, donaciones) usan **wallets efímeras**
-  (`web/src/platform/ephemeral.ts`, fondeadas por friendbot), **nunca** la wallet de Pollar.
+- **Pollar = wallet creation only.** After email login we obtain `walletAddress` and nothing
+  else. beHuman **does not use it to sign** nor store it with `platformId`.
+- **ZK credential** (from matcher: ID + face → `secret` + Merkle path) is generated
+  **client-side** (`web/src/kyc/credentialStore.ts`) and enables participation.
+- **Anonymous actions** (posts, opinions, donations) use **ephemeral wallets**
+  (`web/src/platform/ephemeral.ts`, funded by friendbot), **never** the Pollar wallet.
 
-## Invariantes (se cumplen)
+## Invariants (enforced)
 
-| # | Invariante | Cómo |
+| # | Invariant | How |
 |---|---|---|
-| 1 | El `secret` se genera/guarda solo client-side; `platformId` se deriva en el navegador | El flujo Pollar usa `KycFlow mode="credential"` → `randomSecret()` + `computeCommitment` + enroll, igual que hoy. El secret jamás se envía. |
-| 2 | La wallet de Pollar es solo entrada pública; las acciones anónimas no la usan | Pollar solo crea la wallet; posts/opiniones/donaciones siguen con efímeras + prueba ZK. |
-| 3 | Las efímeras se fondean independiente (friendbot), nunca desde Pollar | `ephemeral.ts` sin cambios; no hay transferencia Pollar → efímera. |
-| 4 | El email nunca toca el backend de beHuman ni se mapea a `platformId` | El email vive solo en Pollar (su flujo). beHuman no guarda email ni la wallet de Pollar junto al platformId. |
-| 5 | Se SUMA, no reemplaza | Stellar Wallets Kit (Freighter…) sigue intacto para usuarios cripto; Pollar es la ruta email. |
+| 1 | `secret` generated/stored client-side only; `platformId` derived in browser | Pollar flow uses `KycFlow mode="credential"` → `randomSecret()` + `computeCommitment` + enroll, same as today. Secret never sent. |
+| 2 | Pollar wallet is public entry only; anonymous actions don't use it | Pollar only creates wallet; posts/opinions/donations still use ephemerals + ZK proof. |
+| 3 | Ephemerals funded independently (friendbot), never from Pollar | `ephemeral.ts` unchanged; no Pollar → ephemeral transfer. |
+| 4 | Email never touches beHuman backend nor maps to `platformId` | Email lives only in Pollar (their flow). beHuman does not store email or Pollar wallet with platformId. |
+| 5 | ADDS, does not replace | Stellar Wallets Kit (Freighter…) intact for crypto users; Pollar is the email route. |
 
-## Qué firma Pollar en beHuman
+## What Pollar signs in beHuman
 
-**Nada.** Decisión de producto: Pollar es únicamente creación de wallet amigable. El registro
-on-chain de Capa 1 (`verify_and_register`, un invoke Soroban que requiere firma del titular)
-**no** se hace por Pollar — la participación anónima no lo necesita (se gatea por la credencial
-ZK + prueba de pertenencia, no por `is_verified(address)`). Si en el futuro se quisiera el
-registro on-chain bajo la wallet de Pollar, habría que validar que su SDK firme XDR Soroban
-(hoy expone `signAndSubmitTx`/`signTx` pero no documenta soporte Soroban).
+**Nothing.** Product decision: Pollar is friendly wallet creation only. Layer 1 on-chain registration
+(`verify_and_register`, a Soroban invoke requiring owner signature)
+**is not done via Pollar** — anonymous participation does not need it (gated by ZK credential
++ membership proof, not `is_verified(address)`). If on-chain registration under the Pollar wallet
+were desired in the future, validate that their SDK signs Soroban XDR
+(today exposes `signAndSubmitTx`/`signTx` but Soroban support is not documented).
 
-## Implementación
+## Implementation
 
-- `web/src/identity/pollar.tsx`: `PollarRoot` (monta `<PollarProvider client={{apiKey, stellarNetwork:'testnet'}}>` **solo si** hay `VITE_POLLAR_PUBLISHABLE_KEY`) + `PollarEmailLogin` (botón que abre el modal email/OTP de Pollar y avisa cuando la wallet quedó creada).
-- `web/src/main.tsx`: envuelve la app en `PollarRoot`.
-- `web/src/pages/AuthPage.tsx`: en "registrarse" agrega **"Crear cuenta con email"** (además de "Conectar wallet"). Al crear la wallet → `/onboarding?via=email`.
-- `web/src/kyc/KycFlow.tsx`: nuevo `mode="credential"` → corre el matcher y crea la credencial ZK **sin** conectar wallet ni registrar on-chain.
-- `web/src/pages/OnboardingPage.tsx`: `?via=email` → `mode="credential"` + aviso honesto.
+- `web/src/identity/pollar.tsx`: `PollarRoot` (mounts `<PollarProvider client={{apiKey, stellarNetwork:'testnet'}}>` **only if** `VITE_POLLAR_PUBLISHABLE_KEY` exists) + `PollarEmailLogin` (button opening Pollar email/OTP modal and notifying when wallet is created).
+- `web/src/main.tsx`: wraps app in `PollarRoot`.
+- `web/src/pages/AuthPage.tsx`: on "sign up" adds **"Create account with email"** (in addition to "Connect wallet"). After wallet creation → `/onboarding?via=email`.
+- `web/src/kyc/KycFlow.tsx`: new `mode="credential"` → runs matcher and creates ZK credential **without** connecting wallet or on-chain registration.
+- `web/src/pages/OnboardingPage.tsx`: `?via=email` → `mode="credential"` + honest notice.
 
-## Configuración
+## Configuration
 
-`.env` → `VITE_POLLAR_PUBLISHABLE_KEY=` (key de **testnet**, prefijo `pub_testnet_`). Vacío =
-la opción de email queda **oculta** (la app funciona igual con Freighter). La red la define el
-prefijo de la key.
+`.env` → `VITE_POLLAR_PUBLISHABLE_KEY=` (**testnet** key, prefix `pub_testnet_`). Empty =
+email option **hidden** (app works the same with Freighter). Network defined by key prefix.
 
-## Verificación (testnet)
+## Verification (testnet)
 
-1. Sin wallet: "Crear cuenta con email" → modal de Pollar (email + código) → wallet creada.
-2. Onboarding (`?via=email`): DNI + cara → **credencial ZK client-side** (no firma, no on-chain).
-3. Participación anónima: opiniones/posts/donaciones con `platformId` + efímeras.
-4. Comprobar que **no** hay transferencia desde la wallet de Pollar hacia ninguna efímera
-   (las efímeras se fondean por friendbot) → sin rastro Pollar → efímera → opinión.
-5. El flujo Freighter sigue funcionando. beHuman no guarda email ni `secret`.
+1. Without wallet: "Create account with email" → Pollar modal (email + code) → wallet created.
+2. Onboarding (`?via=email`): ID + face → **client-side ZK credential** (no signing, no on-chain).
+3. Anonymous participation: opinions/posts/donations with `platformId` + ephemerals.
+4. Verify **no** transfer from Pollar wallet to any ephemeral
+  (ephemerals funded by friendbot) → no Pollar → ephemeral → opinion trail.
+5. Freighter flow still works. beHuman does not store email or `secret`.
 
-## UX honesta
+## Honest UX
 
-No afirmamos "no se guarda nada en ningún lado" (Pollar sí guarda su parte). El copy es:
-*"Tu email crea tu wallet, pero nunca se vincula a tu identidad anónima."*
+We do not claim "nothing is stored anywhere" (Pollar stores their part). Copy is:
+*"Your email creates your wallet, but it is never linked to your anonymous identity."*

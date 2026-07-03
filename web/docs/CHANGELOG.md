@@ -1,40 +1,40 @@
 # Changelog — web
 
-Formato basado en [Keep a Changelog](https://keepachangelog.com/).
+Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased] — feat/web-onboarding
 
 ### Changed
 
-- **Copy completo del producto** — `src/i18n/locales/` + secciones Arquitectura, Plataforma, Curaduría
-- Flujo KYC ampliado a **4 fases** (vault)
-- Tabla comparativa: **7 filas**
-- Footer: behuman-org, Stellar Hacks: Real-World ZK, disclaimer issuer mock
+- **Full product copy** — `src/i18n/locales/` + Architecture, Platform, Curation sections
+- KYC flow expanded to **4 phases** (vault)
+- Comparison table: **7 rows**
+- Footer: behuman-org, Stellar Hacks: Real-World ZK, mock issuer disclaimer
 
-### Changed (previo)
-- Hero canvas lee tokens CSS vía `getComputedStyle` (glow + trail naranja)
+### Changed (previous)
+- Hero canvas reads CSS tokens via `getComputedStyle` (glow + orange trail)
 
 ### Added
 
-- Design tokens (`tokens.css`) inspirados en zk.me
-- Hero interactivo: canvas orbes + trail + dot-grid parallax
-- Landing sections: Cómo funciona, Stats, Compare
-- Nav glass pill + footer
-- Componentes UI `Button`, `Badge`
-- Documentación en `web/docs/`
-- Fuentes Plus Jakarta Sans + JetBrains Mono
+- Design tokens (`tokens.css`) inspired by zk.me
+- Interactive hero: canvas orbs + trail + dot-grid parallax
+- Landing sections: How it works, Stats, Compare
+- Glass pill nav + footer
+- UI components `Button`, `Badge`
+- Documentation in `web/docs/`
+- Plus Jakarta Sans + JetBrains Mono fonts
 
 ### Changed
 
-- `App.tsx` — de scaffolding a landing completa
-- Tests — 3 asserts (nav, hero `#hero-title`, sección `#como-funciona`)
-- `usePointerSpring` — ref mutable (sin re-render por frame en canvas loop)
+- `App.tsx` — from scaffolding to full landing
+- Tests — 3 asserts (nav, hero `#hero-title`, `#como-funciona` section)
+- `usePointerSpring` — mutable ref (no re-render per frame in canvas loop)
 
 ### Fixed
 
-- Polyfill `matchMedia` + mock canvas en Vitest setup
-- HeroBackground — loop canvas unificado (grid parallax en mismo rAF)
+- `matchMedia` polyfill + canvas mock in Vitest setup
+- HeroBackground — unified canvas loop (grid parallax in same rAF)
 
 ### Removed
 
-- `App.css`, `index.css` legacy
+- Legacy `App.css`, `index.css`

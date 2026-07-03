@@ -1,54 +1,54 @@
-# Log de implementación — frontend
+# Implementation log — frontend
 
-Registro de slices entregados. Estado actual: landing + KYC + app social + funding UI (dev).
+Record of delivered slices. Current state: landing + KYC + social app + funding UI (dev).
 
 ---
 
-## Slice actual · App social + hardening
+## Current slice · Social app + hardening
 
-**Rama:** `feat/web-onboarding` / `fix/security-audit-hardening`
+**Branch:** `feat/web-onboarding` / `fix/security-audit-hardening`
 
-### Entregado
+### Delivered
 
-| Área | Estado |
+| Area | Status |
 |------|--------|
 | Stellar Wallets Kit + Pollar (email) | ✅ |
 | React Router (`/app/*`, onboarding, login) | ✅ |
-| Flujo KYC completo + prueba ZK + on-chain | ✅ |
-| Pollar: registro on-chain real antes de verified | ✅ |
-| Capa 2: auth Bearer (`POST /auth`), feed, artículos | ✅ |
-| AppGuard: credencial + `is_verified` on-chain | ✅ |
-| Storage cifrado AES-GCM (secretos/PII local) | ✅ |
-| Headers seguridad (`vercel.json`: CSP, X-Frame-Options) | ✅ |
-| Env prod: fail-fast si faltan URLs API | ✅ |
-| Funding UI (modo dev) | ✅ |
+| Full KYC flow + ZK proof + on-chain | ✅ |
+| Pollar: real on-chain registration before verified | ✅ |
+| Layer 2: Bearer auth (`POST /auth`), feed, articles | ✅ |
+| AppGuard: credential + on-chain `is_verified` | ✅ |
+| AES-GCM encrypted storage (local secrets/PII) | ✅ |
+| Security headers (`vercel.json`: CSP, X-Frame-Options) | ✅ |
+| Prod env: fail-fast if API URLs missing | ✅ |
+| Funding UI (dev mode) | ✅ |
 
-### Modelo de identidad (actualizado)
+### Identity model (updated)
 
-- **Capa 1:** `is_verified(address)` — wallet Stellar (incl. Pollar custodial).
-- **Capa 2:** `platformId` ZK — prueba Groth16 `post.circom`, no address de wallet.
+- **Layer 1:** `is_verified(address)` — Stellar wallet (incl. Pollar custodial).
+- **Layer 2:** ZK `platformId` — Groth16 proof `post.circom`, not wallet address.
 
-### Privacidad
+### Privacy
 
-PII va al matcher mock (HTTPS); no se persiste. Secret ZK cifrado en localStorage.
-
----
-
-## Slice 1b · Copy completo del producto
-
-**Fecha:** 2026-06-24
-
-Copy centralizado en `src/i18n/locales/`, secciones landing (capas, plataforma, curaduría).
+PII goes to mock matcher (HTTPS); not persisted. ZK secret encrypted in localStorage.
 
 ---
 
-## Slice 1 · Landing + hero interactivo
+## Slice 1b · Full product copy
 
-**Fecha:** 2026-06-24
+**Date:** 2026-06-24
 
-Landing zk.me-style, design system B/N + naranja, hero canvas interactivo.
+Copy centralized in `src/i18n/locales/`, landing sections (layers, platform, curation).
 
-### Verificación
+---
+
+## Slice 1 · Landing + interactive hero
+
+**Date:** 2026-06-24
+
+zk.me-style landing, B/W + orange design system, interactive canvas hero.
+
+### Verification
 
 ```bash
 npm run test --workspace @behuman/web

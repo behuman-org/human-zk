@@ -11,7 +11,7 @@ import { getFeed, postContent, setProfile, type FeedItem } from "./api2";
 import { OPINION_BOARD_CONTRACT_ID } from "./stellar2";
 
 const DEFAULT_TWEET =
-  "Para mí el asado argentino es lo máximo: bife de chorizo, achuras y un buen Malbec. 🇦🇷🥩";
+  "For me, a proper weekend means good food, honest conversation, and time offline.";
 
 const txUrl = (hash: string) => `https://stellar.expert/explorer/testnet/tx/${hash}`;
 
@@ -42,15 +42,15 @@ export function Platform({ onBack }: { onBack: () => void }) {
     if (!cred) return;
     setError(null);
     try {
-      setBusy("Generando prueba de pertenencia (ZK) en tu dispositivo…");
+      setBusy("Generating membership proof (ZK) on your device…");
       const p = await generatePlatformProof(cred, "0");
       const pid = platformIdHex(p.publicSignals[1]);
       setPlatformId(pid);
-      setBusy("Fondeando cuenta efímera (NO es la wallet del KYC)…");
+      setBusy("Funding ephemeral account (NOT the KYC wallet)…");
       const kp = await ephemeral();
-      setBusy("Inicializando la plataforma on-chain si hace falta…");
+      setBusy("Initializing platform on-chain if needed…");
       await initIfNeeded(kp, p.publicSignals[0]);
-      setBusy("Registrando tu identidad anónima on-chain…");
+      setBusy("Registering your anonymous identity on-chain…");
       try {
         await registerIdentity(kp, p);
       } catch (e) {
@@ -68,14 +68,14 @@ export function Platform({ onBack }: { onBack: () => void }) {
     if (!cred || !platformId) return;
     setError(null);
     try {
-      setBusy("Calculando contentHash y generando prueba ZK del post…");
+      setBusy("Computing contentHash and generating post ZK proof…");
       const ch = await contentHashField(tweet);
       const p = await generatePlatformProof(cred, ch);
-      setBusy("Anclando on-chain con la cuenta efímera…");
+      setBusy("Anchoring on-chain with ephemeral account…");
       const kp = await ephemeral();
       const txHash = await postTweet(kp, p);
       setLastTx(txHash);
-      setBusy("Guardando contenido off-chain…");
+      setBusy("Saving content off-chain…");
       if (username) await setProfile(platformId, username);
       await postContent(platformId, tweet, ch, txHash);
       setFeed(await getFeed());
@@ -89,10 +89,10 @@ export function Platform({ onBack }: { onBack: () => void }) {
   if (!cred) {
     return (
       <section className="app__card">
-        <h2>Plataforma de opinión</h2>
-        <p>Para participar necesitás una identidad verificada (Capa 1) en este dispositivo.</p>
-        <p>Validate primero en “Validar mi identidad”.</p>
-        <button type="button" onClick={onBack}>Volver</button>
+        <h2>Opinion platform</h2>
+        <p>You need a verified identity (Layer 1) on this device to participate.</p>
+        <p>Verify first via “Start verification”.</p>
+        <button type="button" onClick={onBack}>Back</button>
       </section>
     );
   }
@@ -101,39 +101,39 @@ export function Platform({ onBack }: { onBack: () => void }) {
 
   return (
     <section className="app__card">
-      <h2>Plataforma de opinión (anónima)</h2>
+      <h2>Anonymous opinion platform</h2>
       {!OPINION_BOARD_CONTRACT_ID && (
-        <p style={{ color: "#c5221f" }}>⚠️ Falta <code>VITE_OPINION_BOARD_CONTRACT_ID</code>.</p>
+        <p style={{ color: "#c5221f" }}>⚠️ Missing <code>VITE_OPINION_BOARD_CONTRACT_ID</code>.</p>
       )}
 
       {!registered ? (
         <>
           <p>
-            Tu identidad de plataforma es <strong>anónima</strong>: se deriva de tu secreto de
-            Capa 1 (<code>platformId = Poseidon(secret, scope)</code>). No usa tu wallet ni tu
-            address del KYC. Es imposible linkearla a tu identidad real.
+            Your platform identity is <strong>anonymous</strong>: derived from your Layer 1 secret
+            (<code>platformId = Poseidon(secret, scope)</code>). It does not use your wallet or KYC
+            address. It cannot be linked to your real identity.
           </p>
           <button type="button" onClick={createIdentity} disabled={!!busy}>
-            Crear mi identidad anónima
+            Create my anonymous identity
           </button>
         </>
       ) : (
         <>
           <p>
-            Tu seudónimo (handle): <strong>@{handle}</strong>
+            Your pseudonym (handle): <strong>@{handle}</strong>
             <br />
             <code style={{ wordBreak: "break-all", fontSize: "0.8em" }}>{platformId}</code>
           </p>
           <label style={{ display: "block", margin: "8px 0" }}>
             Username (libre)
-            <input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="ej. che_opinador" />
+            <input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="e.g. thoughtful_voice" />
           </label>
           <label style={{ display: "block", margin: "8px 0" }}>
-            Tu opinión
+            Your opinion
             <textarea value={tweet} onChange={(e) => setTweet(e.target.value)} rows={3} style={{ width: "100%" }} />
           </label>
           <button type="button" onClick={publish} disabled={!!busy || !tweet.trim()}>
-            Publicar (gateado por prueba ZK)
+            Publish (ZK-gated)
           </button>
         </>
       )}
@@ -142,40 +142,40 @@ export function Platform({ onBack }: { onBack: () => void }) {
       {error && <p style={{ color: "#c5221f" }}>Error: {error}</p>}
       {lastTx && (
         <p style={{ color: "#137333" }}>
-          ✅ Publicado y anclado on-chain.{" "}
-          <a href={txUrl(lastTx)} target="_blank" rel="noreferrer">Ver la transacción</a>
+          ✅ Published and anchored on-chain.{" "}
+          <a href={txUrl(lastTx)} target="_blank" rel="noreferrer">View transaction</a>
           <br />
           <span style={{ fontSize: "0.85em", opacity: 0.8 }}>
-            Firmada por una cuenta efímera (no tu wallet del KYC): es anónima.
+            Signed by an ephemeral account (not your KYC wallet): anonymous.
           </span>
         </p>
       )}
 
       <hr />
       <h3>Feed</h3>
-      {feed.length === 0 && <p>Todavía no hay posts.</p>}
+      {feed.length === 0 && <p>No posts yet.</p>}
       {feed.map((f, i) => (
         <div key={i} style={{ borderTop: "1px solid #eee", padding: "8px 0" }}>
-          <strong>{f.username || "anónimo"}</strong>{" "}
+          <strong>{f.username || "anonymous"}</strong>{" "}
           <span style={{ opacity: 0.6 }}>@{f.handle}</span>{" "}
           {f.curation?.status === "flagged" && (
             <span title={f.curation.reason} style={{ fontSize: "0.75em", color: "#b06000" }}>
-              ⚠️ etiquetado
+              ⚠️ flagged
             </span>
           )}
           {f.curation?.status === "approved" && (
-            <span style={{ fontSize: "0.75em", color: "#137333" }}>✓ curado</span>
+            <span style={{ fontSize: "0.75em", color: "#137333" }}>✓ curated</span>
           )}
           <p style={{ margin: "4px 0" }}>{f.content}</p>
           {f.txHash && (
             <a href={txUrl(f.txHash)} target="_blank" rel="noreferrer" style={{ fontSize: "0.8em" }}>
-              🔗 tx on-chain (anónima)
+              🔗 on-chain tx (anonymous)
             </a>
           )}
         </div>
       ))}
 
-      <button type="button" onClick={onBack} style={{ marginTop: 12 }}>Volver</button>
+      <button type="button" onClick={onBack} style={{ marginTop: 12 }}>Back</button>
     </section>
   );
 }

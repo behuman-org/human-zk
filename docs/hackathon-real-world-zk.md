@@ -1,83 +1,83 @@
-# Stellar Hacks: Real-World ZK — guía de presentación
+# Stellar Hacks: Real-World ZK — presentation guide
 
 > Hackathon: [Stellar Hacks: Real-World ZK](https://dorahacks.io/hackathon/stellar-hacks-zk/detail) (DoraHacks)  
 > Repo: **[github.com/behuman-org/human-zk](https://github.com/behuman-org/human-zk)**  
-> Enfoque: **identity proofs** — proof of personhood con ZK verificado on-chain en Soroban.
+> Focus: **identity proofs** — proof of personhood with ZK verified on-chain in Soroban.
 
-Guía de presentación para la hackathon **ZK Real-World** (`human-zk` + README honesto).
-
----
-
-## Qué presentamos (pitch en una frase)
-
-**human** demuestra que una persona es real y única sin revelar PII: prueba Groth16 (Circom,
-curva **BLS12-381**) verificada en el contrato `kyc_verifier`, puente `is_verified(address)`,
-y plataforma de opinión con identidad anónima `platformId` (circuito `post.circom`).
-
-El ZK es **load-bearing**: sin la prueba no hay registro on-chain ni publicación anónima.
+Presentation guide for the **ZK Real-World** hackathon (`human-zk` + honest README).
 
 ---
 
-## Requisitos de la hackathon vs. nuestro repo
+## What we present (one-line pitch)
 
-| Requisito | Estado | Notas |
+**human** demonstrates that a person is real and unique without revealing PII: Groth16 proof (Circom,
+**BLS12-381** curve) verified in the `kyc_verifier` contract, bridge `is_verified(address)`,
+and opinion platform with anonymous `platformId` identity (`post.circom` circuit).
+
+ZK is **load-bearing**: without the proof there is no on-chain registration or anonymous publishing.
+
+---
+
+## Hackathon requirements vs. our repo
+
+| Requirement | Status | Notes |
 |-----------|--------|-------|
-| Repo open-source + README claro | ✅ | `README.md`, `CLAUDE.md`, `docs/` |
-| Demo video 2–3 min | ⬜ | Grabar flujo: KYC → `is_verified` → post con `platformId` |
-| ZK integrado en Stellar | ✅ | `verify_and_register` + `opinion_board` en testnet |
-| ZK load-bearing | ✅ | Groth16 on-chain; no es decorativo |
-| Honestidad sobre mocks | ✅ | Issuer biométrico mock; funding dev-only; declarar en README |
+| Open-source repo + clear README | ✅ | `README.md`, `CLAUDE.md`, `docs/` |
+| 2–3 min demo video | ⬜ | Record flow: KYC → `is_verified` → post with `platformId` |
+| ZK integrated in Stellar | ✅ | `verify_and_register` + `opinion_board` on testnet |
+| ZK load-bearing | ✅ | Groth16 on-chain; not decorative |
+| Honesty about mocks | ✅ | Mock biometric issuer; funding dev-only; state in README |
 
 ---
 
-## Stack ZK (para jurados)
+## ZK stack (for judges)
 
-- **Toolchain:** Circom 2 + Groth16, curva **BLS12-381** (`--prime bls12381`)
-- **Verificador on-chain:** `groth16_verifier` oficial (host functions CAP-0059)
-- **Primitivas:** Poseidon (Merkle, commitment, nullifier global `Poseidon(secret)`)
-- **Capa 1:** `identity/circuits/kyc.circom` → `kyc_verifier`
-- **Capa 2:** `platform/circuits/post.circom` → `opinion_board`
+- **Toolchain:** Circom 2 + Groth16, **BLS12-381** curve (`--prime bls12381`)
+- **On-chain verifier:** official `groth16_verifier` (CAP-0059 host functions)
+- **Primitives:** Poseidon (Merkle, commitment, global nullifier `Poseidon(secret)`)
+- **Layer 1:** `identity/circuits/kyc.circom` → `kyc_verifier`
+- **Layer 2:** `platform/circuits/post.circom` → `opinion_board`
 
-> No usamos BN254 nativo de Protocol 25/26; elegimos BLS12-381 por compatibilidad con el
-> verificador Soroban de referencia. Documentado en `identity/circuits/README.md`.
+> We do not use native BN254 from Protocol 25/26; we chose BLS12-381 for compatibility with the
+> reference Soroban verifier. Documented in `identity/circuits/README.md`.
 
 ---
 
-## Contratos testnet (referencia demo)
+## Testnet contracts (demo reference)
 
-Actualizar tras cada redeploy. Ver `identity/AGENTS.md` y `docs/capa-2-plataforma.md`.
+Update after each redeploy. See `identity/AGENTS.md` and `docs/capa-2-plataforma.md`.
 
-| Contrato | Uso |
+| Contract | Use |
 |----------|-----|
 | `kyc_verifier` | `verify_and_register`, `is_verified` |
-| `opinion_board` | `register_identity`, `post` con proof |
+| `opinion_board` | `register_identity`, `post` with proof |
 
 ---
 
-## Checklist pre-submit (DoraHacks)
+## Pre-submit checklist (DoraHacks)
 
-- [ ] Repo público con README actualizado para **Stellar Hacks: Real-World ZK**
-- [ ] Video demo subido (YouTube/Loom) — link en README
-- [ ] `.env.example` completo; sin secretos en el repo
-- [ ] `web/public/circuits/*` commiteados o script de build documentado
-- [ ] Declarar: issuer mock, matcher remoto vs local, funding `dev` only
-- [ ] Link a frontend demo (Vercel) si aplica
-- [ ] BUIDL en DoraHacks con repo + video
+- [ ] Public repo with README updated for **Stellar Hacks: Real-World ZK**
+- [ ] Demo video uploaded (YouTube/Loom) — link in README
+- [ ] Complete `.env.example`; no secrets in repo
+- [ ] `web/public/circuits/*` committed or build script documented
+- [ ] Declare: mock issuer, remote vs local matcher, funding `dev` only
+- [ ] Link to demo frontend (Vercel) if applicable
+- [ ] BUIDL on DoraHacks with repo + video
 
 ---
 
-## Demo recomendada (guión ~2 min)
+## Recommended demo (~2 min script)
 
-1. Landing → “Verificá que sos humano” (Capa 1).
-2. Wallet testnet → DNI + cara → prueba en navegador → tx `verify_and_register`.
+1. Landing → "Verify you're human" (Layer 1).
+2. Testnet wallet → ID + face → browser proof → tx `verify_and_register`.
 3. Stellar Expert: `is_verified == true`.
-4. Entrar a `/app` → registrar `platformId` → publicar opinión (ancla on-chain + feed).
-5. Mencionar nullifier global anti-Sybil y que la wallet KYC no aparece en el post.
+4. Enter `/app` → register `platformId` → publish opinion (on-chain anchor + feed).
+5. Mention global nullifier anti-Sybil and that KYC wallet does not appear in the post.
 
 ---
 
-## Enlaces útiles
+## Useful links
 
 - [Hackathon detail](https://dorahacks.io/hackathon/stellar-hacks-zk/detail)
 - [Stellar ZK skills](https://skills.stellar.org) — zk-proofs
-- [LLMs Stellar](https://developers.stellar.org/llms.txt)
+- [Stellar LLMs](https://developers.stellar.org/llms.txt)

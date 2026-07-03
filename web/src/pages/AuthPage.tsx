@@ -85,9 +85,9 @@ export function AuthPage({ defaultTab = "login" }: { defaultTab?: AuthTab }) {
                 onClick={handleLogin}
                 disabled={busy}
               >
-                {busy ? "…" : "Conectar mi wallet"}
+                {busy ? "…" : auth.connectWallet}
               </button>
-              <p className="auth-page__hint">Si ya tenés una wallet (Freighter, xBull, LOBSTR…).</p>
+              <p className="auth-page__hint">If you already have a wallet (Freighter, xBull, LOBSTR…).</p>
 
               <div className="auth-page__pollar">
                 <span className="auth-page__or">o</span>
@@ -98,14 +98,14 @@ export function AuthPage({ defaultTab = "login" }: { defaultTab?: AuthTab }) {
                     type="button"
                     className="auth-page__submit auth-page__submit--alt"
                     disabled
-                    title="Configurá VITE_POLLAR_PUBLISHABLE_KEY en .env para habilitar Pollar"
+                    title="Set VITE_POLLAR_PUBLISHABLE_KEY in .env to enable Pollar"
                   >
-                    Crear cuenta con email
+                    Create account with email
                   </button>
                 )}
                 <p className="auth-page__hint">
-                  ¿No tenés wallet? Te creamos una con tu email. <strong>Nunca se vincula</strong> a
-                  tu identidad anónima.
+                  No wallet yet? We create one with your email. <strong>It is never linked</strong> to
+                  your anonymous identity.
                 </p>
               </div>
 
@@ -142,7 +142,7 @@ export function AuthPage({ defaultTab = "login" }: { defaultTab?: AuthTab }) {
                   <span className="auth-page__or">o</span>
                   <PollarEmailLogin onReady={() => navigate("/onboarding?via=email")} />
                   <p className="auth-page__hint">
-                    Tu email crea tu wallet, pero <strong>nunca se vincula</strong> a tu identidad anónima.
+                    Your email creates your wallet, but <strong>is never linked</strong> to your anonymous identity.
                   </p>
                 </div>
               )}

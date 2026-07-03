@@ -1,89 +1,89 @@
-# CAPA 2 — Plataforma de opinión (anónima por ZK)
+# LAYER 2 — Opinion platform (anonymous via ZK)
 
 > Vault: `Plataforma de Opinión Verificada`, `Identidad Pública vs Anónima`,
 > `Diseño del Circuito ZK`, `Decisiones técnicas y trade-offs`, `Stack de Privacidad en Stellar`.
 
-## Qué hace
+## What it does
 
-Un humano verificado (Capa 1) participa en la plataforma **sin revelar nada** de su
-identidad real ni su address de KYC:
+A verified human (Layer 1) participates on the platform **without revealing anything** about their
+real identity or KYC address:
 
-1. **Identidad anónima**: registra su `platformId = Poseidon(secret, scope)` probando con ZK
-   que su commitment pertenece al árbol del issuer (`issuerRoot`). Es su seudónimo
-   persistente, único por humano, **incorrelacionable** con el address/PII.
-2. **Perfil + username**: username libre (mutable), off-chain en `platform/api`, keyed por
-   `platformId`. **Handle** público = últimos 5 caracteres del `platformId`.
-3. **Post**: publica una opinión gateada por una prueba ZK que ata `(issuerRoot, platformId,
-   contentHash)`; contenido off-chain + ancla on-chain bajo `platformId`.
-4. **Feed**: lista de posts por seudónimo.
+1. **Anonymous identity**: registers `platformId = Poseidon(secret, scope)` by proving with ZK
+   that their commitment belongs to the issuer tree (`issuerRoot`). It is their persistent
+   pseudonym, unique per human, **uncorrelatable** with address/PII.
+2. **Profile + username**: free username (mutable), off-chain in `platform/api`, keyed by
+   `platformId`. Public **handle** = last 5 characters of `platformId`.
+3. **Post**: publishes an opinion gated by a ZK proof binding `(issuerRoot, platformId,
+   contentHash)`; content off-chain + on-chain anchor under `platformId`.
+4. **Feed**: list of posts by pseudonym.
 
-## Invariantes ZK (no negociables) — cómo se cumplen
+## ZK invariants (non-negotiable) — how they are enforced
 
-| Invariante | Implementación |
+| Invariant | Implementation |
 |---|---|
-| El address del KYC nunca se usa/revela | La identidad es `platformId` (del secret). El contrato no tiene `Address`. El fee lo paga una **cuenta efímera** (friendbot), no la wallet del KYC. |
-| Identidad = `Poseidon(secret, scope)` | `platformId` es output del circuito; determinístico, único por humano, unidireccional. |
-| Gate por pertenencia (no `is_verified`) | El circuito prueba inclusión Merkle del commitment bajo `issuerRoot`; el contrato exige `issuerRoot` de confianza. Reutiliza la `Capa1Credential` del device. |
-| Post ata `contentHash` (anti-replay) | `contentHash` es public input bound en el circuito; el contrato rechaza `(platformId, contentHash)` repetido. |
-| Fee payer ≠ address del KYC | Cuenta efímera aleatoria fondeada por friendbot firma las tx. |
+| KYC address is never used/revealed | Identity is `platformId` (from secret). Contract has no `Address`. Fee is paid by an **ephemeral account** (friendbot), not the KYC wallet. |
+| Identity = `Poseidon(secret, scope)` | `platformId` is circuit output; deterministic, unique per human, one-way. |
+| Gate by membership (not `is_verified`) | Circuit proves Merkle inclusion of commitment under `issuerRoot`; contract requires trusted `issuerRoot`. Reuses device `Capa1Credential`. |
+| Post binds `contentHash` (anti-replay) | `contentHash` is public input bound in the circuit; contract rejects repeated `(platformId, contentHash)`. |
+| Fee payer ≠ KYC address | Random ephemeral account funded by friendbot signs txs. |
 
-**Anti-Sybil**: `register_identity` rechaza un `platformId` ya registrado (mismo humano →
-mismo `platformId`).
+**Anti-Sybil**: `register_identity` rejects an already registered `platformId` (same human →
+same `platformId`).
 
-## Arquitectura
+## Architecture
 
 ```
-[web/platform] credencial Capa 1 (localStorage)
-   -> platformId + prueba ZK (post.circom, en el navegador)
-   -> cuenta efímera (friendbot)  -> opinion_board.register_identity / post
-   -> platform/api (username + contenido off-chain, keyed por platformId)
+[web/platform] Layer 1 credential (localStorage)
+   -> platformId + ZK proof (post.circom, in browser)
+   -> ephemeral account (friendbot)  -> opinion_board.register_identity / post
+   -> platform/api (username + off-chain content, keyed by platformId)
 ```
 
-- `platform/circuits/src/post.circom` (BLS12-381): inclusión Merkle + `platformId` + binding
-  de `contentHash`. Reutiliza los templates de `identity/circuits` (misma curva).
-- `platform/contracts/opinion_board`: verifica Groth16 (mismo patrón que `kyc_verifier`),
-  guarda el `issuerRoot` de confianza, y ancla `PostRecord { platform_id, content_hash, timestamp }`.
-- `platform/api`: perfil + contenido + feed (JSON store, cero PII/address).
-- `web/src/platform`: pruebas en el navegador (snarkjs) + cuenta efímera + firma local.
+- `platform/circuits/src/post.circom` (BLS12-381): Merkle inclusion + `platformId` + binding
+  of `contentHash`. Reuses templates from `identity/circuits` (same curve).
+- `platform/contracts/opinion_board`: verifies Groth16 (same pattern as `kyc_verifier`),
+  stores trusted `issuerRoot`, and anchors `PostRecord { platform_id, content_hash, timestamp }`.
+- `platform/api`: profile + content + feed (JSON store, zero PII/address).
+- `web/src/platform`: browser proofs (snarkjs) + ephemeral account + local signing.
 
-## Imposibilidad de linkear
+## Linking impossibility
 
-`post ↔ address KYC ↔ PII` es criptográficamente imposible:
-- `platformId = Poseidon(secret, scope)` es unidireccional (no se puede invertir a `secret`).
-- El `secret` nunca sale del device; on-chain sólo van `platformId / contentHash / proof`.
-- El fee payer es una cuenta efímera aleatoria, sin relación con el address del KYC.
+`post ↔ KYC address ↔ PII` is cryptographically impossible:
+- `platformId = Poseidon(secret, scope)` is one-way (cannot invert to `secret`).
+- `secret` never leaves the device; on-chain only `platformId / contentHash / proof`.
+- Fee payer is a random ephemeral account, unrelated to the KYC address.
 
-## Contratos desplegados (testnet)
-- opinion_board (e2e, init incluido): `CD2XVZTQTQZL3LU4E6PH7EXDGV2VX6KNAN2L3TROKJAR6U45SC2K2T6M`
-- opinion_board (demo front, init desde el front): `CAZOMMMZSKI2EHH6PHP53NJ3K4DGAJ4JBRAR4HPVNN2QJ4VIF7WJKOQK`
+## Deployed contracts (testnet)
+- opinion_board (e2e, init included): `CD2XVZTQTQZL3LU4E6PH7EXDGV2VX6KNAN2L3TROKJAR6U45SC2K2T6M`
+- opinion_board (frontend demo, init from frontend): `CAZOMMMZSKI2EHH6PHP53NJ3K4DGAJ4JBRAR4HPVNN2QJ4VIF7WJKOQK`
 
-> ⚠️ `trusted_issuer_root` se fija en `init` (un contrato por demo; mismo límite que Capa 1).
+> ⚠️ `trusted_issuer_root` is fixed at `init` (one contract per demo; same limit as Layer 1).
 
-## Reproducir
+## Reproduce
 
 ```bash
-# circuito de plataforma (una vez)
+# platform circuit (once)
 (cd platform/circuits && npm install && bash scripts/compile.sh && POWER=13 bash scripts/setup.sh)
 
-# on-chain por SDK (deploy + init + register + post) — probado: post bajo platformId
+# on-chain via SDK (deploy + init + register + post) — tested: post under platformId
 bash scripts/deploy_platform.sh
-CONTRACT_ID=<id> SIGNER_SECRET=<secret efímero> RPC_URL=https://soroban-testnet.stellar.org \
+CONTRACT_ID=<id> SIGNER_SECRET=<ephemeral secret> RPC_URL=https://soroban-testnet.stellar.org \
   NETWORK_PASSPHRASE="Test SDF Network ; September 2015" npx tsx scripts/e2e-platform.ts
 
-# demo desde el FRONT:
-bash scripts/deploy_platform.sh            # -> VITE_OPINION_BOARD_CONTRACT_ID=<id> en .env
+# demo from FRONTEND:
+bash scripts/deploy_platform.sh            # -> VITE_OPINION_BOARD_CONTRACT_ID=<id> in .env
 npm run serve -w @behuman/api              # :8788
-npm run dev   -w @behuman/web              # :5173 -> "Plataforma de opinión (anónima)"
+npm run dev   -w @behuman/web              # :5173 -> "Anonymous opinion platform"
 ```
 
-Requisito del front: tener una `Capa1Credential` en el device (validarse en Capa 1 primero).
+Frontend requirement: have a `Capa1Credential` on the device (complete Layer 1 validation first).
 
 ## Tests
 ```bash
 cargo test -p opinion_board   # 9/9 (verify, register, anti-Sybil, post, anti-replay, init)
 ```
-`platform/circuits` prueba con snarkjs; `vite build` bundlea el front.
+`platform/circuits` proves with snarkjs; `vite build` bundles the frontend.
 
-## Próximo paso (no en esta iteración)
-- **Curaduría** (`platform/curation`): agentes validadores + moderación.
-- Unicidad de username, modo público (opt-in), lectura sólo-verificados.
+## Next step (not in this iteration)
+- **Curation** (`platform/curation`): validator agents + moderation.
+- Username uniqueness, public mode (opt-in), verified-only reading.

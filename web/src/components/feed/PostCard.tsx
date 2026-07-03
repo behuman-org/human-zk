@@ -81,7 +81,7 @@ export function PostCard({ post, showVotes = false }: PostCardProps) {
       setDidResonate((was) => !was);
       setResonateCount(count);
     } catch (e) {
-      if ((e as Error).message === "necesitas_verificarte") navigate("/onboarding");
+      if ((e as Error).message === "verification_required") navigate("/onboarding");
     } finally {
       setResonating(false);
     }

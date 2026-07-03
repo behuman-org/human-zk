@@ -1,16 +1,16 @@
-# identity · CAPA 1 — KYC con Zero-Knowledge
+# identity · LAYER 1 — Zero-Knowledge KYC
 
-El **núcleo** de beHuman: *proof of personhood*. Una persona verifica su identidad una vez
-(off-chain) y obtiene una identidad **única y anónima** on-chain. Esta capa expone el puente
-que usa todo lo demás: **`is_verified(address)`**.
+The **core** of beHuman: *proof of personhood*. A person verifies their identity once
+(off-chain) and obtains a **unique, anonymous** on-chain identity. This layer exposes the bridge
+everything else uses: **`is_verified(address)`**.
 
-> 📐 Diseño en la vault: `IDEA`, `Prueba de Persona Única`, `Flujo de KYC`,
+> 📐 Design in the vault: `IDEA`, `Prueba de Persona Única`, `Flujo de KYC`,
 > `Diseño del Circuito ZK`, `Contrato Verificador (Soroban)`, `Modelo de Datos`.
 
-| Carpeta | Qué es |
+| Folder | What it is |
 |---|---|
-| [`circuits/`](./circuits/) | Circuito Circom (`kyc.circom`) que prueba la credencial KYC. |
-| [`contracts/kyc_verifier/`](./contracts/kyc_verifier/) | Contrato Soroban: `verify_and_register` + `is_verified`. **El puente con la CAPA 2.** |
-| [`issuer/`](./issuer/) | Issuer KYC **mock** que firma credenciales de prueba. |
+| [`circuits/`](./circuits/) | Circom circuit (`kyc.circom`) that proves the KYC credential. |
+| [`contracts/kyc_verifier/`](./contracts/kyc_verifier/) | Soroban contract: `verify_and_register` + `is_verified`. **Bridge to LAYER 2.** |
+| [`issuer/`](./issuer/) | **Mock** KYC issuer that signs test credentials. |
 
-> Los contratos Rust son miembros del workspace Cargo raíz (`/Cargo.toml`).
+> Rust contracts are members of the root Cargo workspace (`/Cargo.toml`).

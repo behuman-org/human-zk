@@ -1,38 +1,35 @@
-// Rúbrica del agente curador (Nivel 1). Principio rector: filtrar ruido/abuso/desinfo,
-// NO censurar opiniones legítimas. Ante la duda o casos sensibles -> escalar a humanos.
+// Curation agent rubric (Level 1). Core principle: filter noise/abuse/misinformation,
+// NOT censor legitimate opinions. When in doubt or sensitive cases → escalate to humans.
 import type { CurationStatus, CurationVerdict } from "@behuman/shared";
 
-export const SYSTEM_RUBRIC = `Sos un agente curador de una plataforma de opinión de personas verificadas y anónimas.
-Tu trabajo es filtrar ruido, abuso y desinformación SIN censurar opiniones legítimas.
+export const SYSTEM_RUBRIC = `You are a curation agent for a verified, anonymous opinion platform.
+Your job is to filter noise, abuse, and misinformation WITHOUT censoring legitimate opinions.
 
-Evaluá el contenido según esta rúbrica:
-- Veracidad y fuentes: ¿afirma hechos verificables sin respaldo o claramente falsos? (las
-  opiniones subjetivas NO requieren fuentes y son válidas).
-- Coherencia: ¿es comprensible y no es spam/relleno?
-- Toxicidad: ¿hay insultos, acoso, discurso de odio o incitación?
-- Plagio: ¿parece copiado y presentado como propio?
+Evaluate content using this rubric:
+- Truthfulness and sources: does it claim verifiable facts without support or clearly false claims?
+  (Subjective opinions do NOT require sources and are valid.)
+- Coherence: is it understandable and not spam/filler?
+- Toxicity: insults, harassment, hate speech, or incitement?
+- Plagiarism: copied and presented as original?
 
-Decisión (status):
-- "approved": opinión legítima, sin abuso ni desinformación evidente.
-- "flagged": problemático pero acotado (p. ej. toxicidad leve, afirmación dudosa) — se
-  publica etiquetado.
-- "escalated": caso ambiguo, sensible, o que no podés resolver con confianza — va a
-  moderación humana. Ante la duda, escalá.
+Decision (status):
+- "approved": legitimate opinion, no abuse or evident misinformation.
+- "flagged": problematic but bounded (e.g. mild toxicity, dubious claim) — published with a label.
+- "escalated": ambiguous, sensitive, or low-confidence — goes to human moderation. When in doubt, escalate.
 
-REGLA DE ORO: discrepar con una idea NO es motivo de flag/escalada. No moderás por la
-postura, solo por abuso/desinformación/plagio.
+GOLDEN RULE: disagreeing with an idea is NOT grounds for flag/escalation. You moderate abuse/misinformation/plagiarism, not viewpoint.
 
-Respondé ÚNICAMENTE con un objeto JSON válido, sin texto adicional ni markdown:
-{"status": "approved" | "flagged" | "escalated", "reason": "<motivo breve en una frase>"}`;
+Respond ONLY with valid JSON, no extra text or markdown:
+{"status": "approved" | "flagged" | "escalated", "reason": "<brief one-line reason>"}`;
 
 const VALID: CurationStatus[] = ["approved", "flagged", "escalated"];
 
 const ESCALATE_FALLBACK: CurationVerdict = {
   status: "escalated",
-  reason: "No se pudo evaluar automáticamente; derivado a revisión humana.",
+  reason: "Could not evaluate automatically; escalated to human review.",
 };
 
-/** Parsea la respuesta del modelo a un veredicto. Cualquier fallo -> escalar (fail-safe). */
+/** Parse model response into a verdict. Any failure → escalate (fail-safe). */
 export function parseVerdict(text: string): CurationVerdict {
   const raw = extractJson(text);
   if (!raw) return ESCALATE_FALLBACK;
@@ -48,6 +45,6 @@ export function parseVerdict(text: string): CurationVerdict {
 function extractJson(text: string): string | null {
   const t = text.trim();
   if (t.startsWith("{")) return t;
-  const m = t.match(/\{[\s\S]*\}/); // primer objeto JSON embebido
+  const m = t.match(/\{[\s\S]*\}/);
   return m ? m[0] : null;
 }

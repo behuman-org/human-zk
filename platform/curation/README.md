@@ -1,31 +1,31 @@
-# platform/curation · Agentes validadores + moderación
+# platform/curation · Validator agents + moderation
 
-Curaduría en **dos niveles** que mantiene la calidad/veracidad del contenido sin censurar.
+**Two-level** curation that maintains content quality/truthfulness without censorship.
 
-> 📐 Ver en la vault: `Curaduría y Agentes Validadores`.
+> 📐 See in the vault: `Curaduría y Agentes Validadores`.
 
-## Niveles
+## Levels
 
-1. **Agente validador (IA, automático):** evalúa veracidad, fuentes, coherencia, toxicidad,
-   plagio. Usa la **API de Groq** (`GROQ_API_KEY`; modelo configurable con `CURATION_MODEL`,
-   default `openai/gpt-oss-20b`). Posts, **artículos** y opiniones pasan por este nivel antes
-   de publicarse.
-2. **Moderación humana (derivación):** los casos ambiguos o sensibles se **escalan** a una cola
-   (`/moderation/queue` en la API, protegida con `MODERATION_SECRET`).
+1. **Validator agent (AI, automatic):** evaluates truthfulness, sources, coherence, toxicity,
+   plagiarism. Uses **Groq API** (`GROQ_API_KEY`; model configurable with `CURATION_MODEL`,
+   default `openai/gpt-oss-20b`). Posts, **articles**, and opinions pass through this level before
+   publishing.
+2. **Human moderation (escalation):** ambiguous or sensitive cases are **escalated** to a queue
+   (`/moderation/queue` in the API, protected with `MODERATION_SECRET`).
 
-> **Principio rector:** no perder el criterio de la persona — filtrar ruido y abuso, no
-> acallar opiniones legítimas.
+> **Guiding principle:** do not lose human judgment — filter noise and abuse, not
+> legitimate opinions.
 
 ## Fail-safe
 
-Sin `GROQ_API_KEY`, la curaduría **no aprueba silenciosamente**: escala todo a revisión
-(cuarentena). La API filtra contenido escalado en GET de posts/artículos.
+Without `GROQ_API_KEY`, curation **does not silently approve**: escalates everything for review
+(quarantine). API filters escalated content in GET posts/articles.
 
-## Pendiente (backlog)
+## Backlog
 
-- Gobierno de moderadores (¿personas verificadas? ¿reputación?).
-- Apelación de decisiones de moderación.
-- Curaduría on-chain (hoy off-chain).
+- Moderator governance (verified people? reputation?).
+- Appeal of moderation decisions.
+- On-chain curation (today off-chain).
 
 ```bash
 npm install

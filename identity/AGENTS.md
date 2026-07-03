@@ -1,170 +1,170 @@
-# CAPA 1 · KYC-ZK — Handoff para devs y agentes
+# LAYER 1 · KYC-ZK — Handoff for devs and agents
 
-> Doc vivo para **continuar la parte de KYC** (proof of personhood) sin perder contexto.
-> Si tocás KYC, leé esto primero. Complementa el `CLAUDE.md` raíz y el `identity/README.md`.
-> ⚠️ **El repo es público**: NO commitees tokens, keys ni PII. Las credenciales están con el
-> owner (ver "Credenciales y deploy").
+> Living doc to **continue the KYC part** (proof of personhood) without losing context.
+> If you touch KYC, read this first. Complements root `CLAUDE.md` and `identity/README.md`.
+> ⚠️ **The repo is public**: do NOT commit tokens, keys, or PII. Credentials are with the
+> owner (see "Credentials and deploy").
 
 ---
 
-## 1. Qué hace la CAPA 1 (en una imagen)
+## 1. What LAYER 1 does (at a glance)
 
-Una persona prueba que es **real y única** sin revelar su PII, y queda registrada on-chain de
-forma **anónima**. El puente con el resto del producto es `is_verified(address)`.
+A person proves they are **real and unique** without revealing PII, and gets registered on-chain
+**anonymously**. The bridge to the rest of the product is `is_verified(address)`.
 
-**Flujo end-to-end (orquestado por el frontend, `web/src/kyc/KycFlow.tsx`):**
+**End-to-end flow (orchestrated by the frontend, `web/src/kyc/KycFlow.tsx`):**
 
-1. **Conectar wallet** (`wallet.ts`, Stellar Wallets Kit) — Freighter/xBull/LOBSTR. La wallet
-   NO es la identidad de plataforma (eso se deriva aparte, por anonimato).
-2. **Foto del DNI** (`DocumentUpload.tsx` → `POST /document`) — el matcher valida que sea un
-   documento (OCR keywords) y que tenga **cara**.
-3. **Datos a mano** (`Attributes.tsx` → `POST /verify-data`) — año, nº doc, país. El matcher
-   **cotea** los datos contra el OCR. ⚠️ Este cotejo es **SEÑAL BLANDA, NO bloquea** (ver §4).
-4. **Escaneo de cara** (`FaceScan.tsx`, 12 frames → `POST /enroll`) — el matcher corre el
-   **gate real**: match facial DNI↔selfie + liveness. Si pasa, el issuer agrega el
-   `commitment` (Poseidon, generado en el device) al **árbol Merkle** y devuelve `issuerRoot`
-   + camino. La PII (imágenes, datos declarados) **viaja al matcher mock** por HTTPS; se
-   procesa en memoria y **no se persiste ni va on-chain**. El `secret` ZK queda en el device.
-5. **Prueba ZK en el navegador** (`zk.ts`, snarkjs + `web/public/circuits/kyc.{wasm,zkey}`):
-   prueba membresía en el árbol + **nullifier global** `Poseidon(secret)` + address binding
-   (`addressHash`) + atributos (mayor de edad, país).
-6. **On-chain** (`chain.ts`): `initIfNeeded` (inicializa el contrato con `issuerRoot` si hace
-   falta) → `verify_and_register(address, proof, public_inputs)`. Tras confirmar,
+1. **Connect wallet** (`wallet.ts`, Stellar Wallets Kit) — Freighter/xBull/LOBSTR. The wallet
+   is NOT platform identity (that is derived separately, for anonymity).
+2. **ID photo** (`DocumentUpload.tsx` → `POST /document`) — matcher validates it is a
+   document (OCR keywords) and has a **face**.
+3. **Manual data** (`Attributes.tsx` → `POST /verify-data`) — year, doc number, country. Matcher
+   **cross-checks** data against OCR. ⚠️ This check is **SOFT SIGNAL, does NOT block** (see §4).
+4. **Face scan** (`FaceScan.tsx`, 12 frames → `POST /enroll`) — matcher runs the
+   **real gate**: ID↔selfie facial match + liveness. If it passes, issuer adds the
+   `commitment` (Poseidon, generated on device) to the **Merkle tree** and returns `issuerRoot`
+   + path. PII (images, declared data) **travels to mock matcher** over HTTPS; processed
+   in memory and **not persisted or sent on-chain**. ZK `secret` stays on device.
+5. **Browser ZK proof** (`zk.ts`, snarkjs + `web/public/circuits/kyc.{wasm,zkey}`):
+   proves tree membership + **global nullifier** `Poseidon(secret)` + address binding
+   (`addressHash`) + attributes (adult, country).
+6. **On-chain** (`chain.ts`): `initIfNeeded` (initializes contract with `issuerRoot` if needed)
+   → `verify_and_register(address, proof, public_inputs)`. After confirm,
    `is_verified(address) == true`.
 
-**La identidad de plataforma (Capa 2)** se deriva de la **credencial guardada en el device**
-(`credentialStore.ts`, localStorage `behuman.cred.*`), NO de la wallet. Sin esa credencial =
-invitado. (Por eso si cambiás de browser/dispositivo, hay que rehacer el onboarding.)
+**Platform identity (Layer 2)** is derived from the **credential stored on device**
+(`credentialStore.ts`, localStorage `behuman.cred.*`), NOT from the wallet. Without that credential =
+guest. (So if you change browser/device, onboarding must be redone.)
 
 ---
 
-## 2. Mapa de archivos
+## 2. File map
 
 **Frontend (`web/src/`):**
-- `kyc/KycFlow.tsx` — orquestador de los 4 pasos + estados.
+- `kyc/KycFlow.tsx` — orchestrator of 4 steps + states.
 - `kyc/DocumentUpload.tsx`, `Attributes.tsx`, `FaceScan.tsx`, `Consent.tsx`, `Status.tsx` — UI.
-- `kyc/api.ts` — cliente del matcher (`VITE_MATCHER_URL`): `/document`, `/verify-data`, `/verify`, `/enroll`.
-- `kyc/chain.ts` — invocación del contrato `kyc_verifier` (firma con wallet). `invoke()` reintenta en `txBadSeq`.
-- `kyc/wallet.ts` — conexión/firma (Stellar Wallets Kit).
-- `kyc/zk.ts`, `bls.ts` — generación de la prueba Groth16 (snarkjs) + encoding BLS12-381.
-- `kyc/credentialStore.ts` — persistencia local de la credencial Capa 1 (no sale del browser).
-- `identity/identity.ts` — `connectAndCheck`, `derivePlatformIdentity` (puente Capa1→Capa2).
-- `pages/OnboardingPage.tsx`, `pages/AuthPage.tsx` — entradas al flujo.
+- `kyc/api.ts` — matcher client (`VITE_MATCHER_URL`): `/document`, `/verify-data`, `/verify`, `/enroll`.
+- `kyc/chain.ts` — `kyc_verifier` contract invocation (wallet signing). `invoke()` retries on `txBadSeq`.
+- `kyc/wallet.ts` — connect/sign (Stellar Wallets Kit).
+- `kyc/zk.ts`, `bls.ts` — Groth16 proof generation (snarkjs) + BLS12-381 encoding.
+- `kyc/credentialStore.ts` — local Layer 1 credential persistence (never leaves browser).
+- `identity/identity.ts` — `connectAndCheck`, `derivePlatformIdentity` (Layer1→Layer2 bridge).
+- `pages/OnboardingPage.tsx`, `pages/AuthPage.tsx` — flow entry points.
 
-**Matcher / issuer (`identity/issuer/`):** backend del gate. Stack: Express + `@tensorflow/tfjs-node`
+**Matcher / issuer (`identity/issuer/`):** gate backend. Stack: Express + `@tensorflow/tfjs-node`
 (face-api) + `tesseract.js` (OCR) + `sharp` (resize).
-- `matcher/server.ts` — endpoints + validación de payload (`parseDeclared`) + logs PII-free.
-- `matcher/documentCheck.ts` — OCR + cotejo de datos (`crossCheckData`/`validateDocumentData`). **Ver §4.**
+- `matcher/server.ts` — endpoints + payload validation (`parseDeclared`) + PII-free logs.
+- `matcher/documentCheck.ts` — OCR + data cross-check (`crossCheckData`/`validateDocumentData`). **See §4.**
 - `matcher/faceEngine.ts` — `loadModels`, `detectFace`, `fitImage` (downscale), `faceDistance`.
-- `matcher/testnetProvider.ts` — gate: match 1:1 + liveness. `liveness.ts` — heurística de vivacidad.
-- `src/index.ts` — `enrollVerifiedHuman`: gate + de-dup anti-Sybil (hash docId+pepper) + árbol Merkle.
+- `matcher/testnetProvider.ts` — gate: 1:1 match + liveness. `liveness.ts` — liveness heuristic.
+- `src/index.ts` — `enrollVerifiedHuman`: gate + anti-Sybil de-dup (docId hash+pepper) + Merkle tree.
 
-**Contrato (`identity/contracts/kyc_verifier/src/lib.rs`):** Soroban/Rust.
-- `init(admin, trusted_issuer_root, vk)` — exige `admin.require_auth()`.
-- `update_root(new_root)` — admin autenticado; permite multi-usuario sin re-deploy.
+**Contract (`identity/contracts/kyc_verifier/src/lib.rs`):** Soroban/Rust.
+- `init(admin, trusted_issuer_root, vk)` — requires `admin.require_auth()`.
+- `update_root(new_root)` — authenticated admin; enables multi-user without re-deploy.
 - `verify_and_register(...)`, `is_verified(address)`.
-- Nullifier **global**: `Poseidon(secret)` — una persona = un registro on-chain (no N wallets).
-- `extend_ttl` en writes persistentes (`Verified`, `Nullifier`).
-- Errores: 1=UntrustedIssuer, 2=AddressMismatch, 3=NullifierAlreadyUsed, 4=InvalidProof,
+- **Global** nullifier: `Poseidon(secret)` — one person = one on-chain registration (not N wallets).
+- `extend_ttl` on persistent writes (`Verified`, `Nullifier`).
+- Errors: 1=UntrustedIssuer, 2=AddressMismatch, 3=NullifierAlreadyUsed, 4=InvalidProof,
   5=AlreadyInitialized, 6=NotInitialized.
 
-**Circuito (`identity/circuits/`):** Circom (`kyc.circom`) + helpers Poseidon. Artefactos
-servidos al frontend están **commiteados** en `web/public/circuits/`. Los Poseidon
-(`identity/circuits/build/poseidon{2,3}_js/`) están gitignored (ver §3, gotcha HF).
+**Circuit (`identity/circuits/`):** Circom (`kyc.circom`) + Poseidon helpers. Artifacts
+served to frontend are **committed** in `web/public/circuits/`. Poseidon
+(`identity/circuits/build/poseidon{2,3}_js/`) are gitignored (see §3, HF gotcha).
 
 ---
 
-## 3. Credenciales y deploy (infra real)
+## 3. Credentials and deploy (real infra)
 
-Ver el detalle en la memoria del owner; resumen del **dónde corre cada cosa**:
+See owner memory for detail; summary of **where each piece runs**:
 
-| Pieza | Dónde | Cómo redeployar |
+| Piece | Where | How to redeploy |
 |---|---|---|
-| **Matcher** (el gate KYC) | **Hugging Face Space** `MauricioHUMAN/human-matcher` (Docker, 16GB free) → `https://mauriciohuman-human-matcher.hf.space` | Ver gotcha abajo |
-| Contrato `kyc_verifier` | Stellar **testnet**: `CB4Y7MEXFZYJY3YPSDJMPCSOAY7ADI2LK66EHG4FJ5FBXJDXYWF3UEUM` | `stellar contract build` + `stellar contract deploy` con la identidad `behuman-deployer` |
-| Frontend | **Vercel** proyecto `human-web` → `https://human-web-psi.vercel.app` | auto-deploy en push a `main`, o `vercel deploy --prod` desde `web/` |
+| **Matcher** (KYC gate) | **Hugging Face Space** `MauricioHUMAN/human-matcher` (Docker, 16GB free) → `https://mauriciohuman-human-matcher.hf.space` | See gotcha below |
+| `kyc_verifier` contract | Stellar **testnet**: `CB4Y7MEXFZYJY3YPSDJMPCSOAY7ADI2LK66EHG4FJ5FBXJDXYWF3UEUM` | `stellar contract build` + `stellar contract deploy` with `behuman-deployer` identity |
+| Frontend | **Vercel** project `human-web` → `https://human-web-psi.vercel.app` | auto-deploy on push to `main`, or `vercel deploy --prod` from `web/` |
 
-**Credenciales (NO en el repo):** HF write token, Render API key, Upstash REST URL/token,
-Pollar publishable key, y la deployer key de Stellar **las tiene el owner (Mauricio)**. Están
-en su `.env` local (gitignored, ver `.env.example`) y en los dashboards respectivos. Pedíselas
-al owner para deployar; nunca las pegues en código ni en commits.
+**Credentials (NOT in repo):** HF write token, Render API key, Upstash REST URL/token,
+Pollar publishable key, and Stellar deployer key **are held by the owner (Mauricio)**. They are
+in their local `.env` (gitignored, see `.env.example`) and respective dashboards. Request from
+owner to deploy; never paste in code or commits.
 
-**Env vars del frontend (Vercel) relevantes a KYC:** `VITE_MATCHER_URL`,
+**Frontend env vars (Vercel) relevant to KYC:** `VITE_MATCHER_URL`,
 `VITE_KYC_VERIFIER_CONTRACT_ID`, `VITE_STELLAR_RPC_URL`, `VITE_STELLAR_NETWORK_PASSPHRASE`,
-`VITE_FRIENDBOT_URL`, `VITE_POLLAR_PUBLISHABLE_KEY`. (Lista completa en `.env.example`.)
+`VITE_FRIENDBOT_URL`, `VITE_POLLAR_PUBLISHABLE_KEY`. (Full list in `.env.example`.)
 
-**Env vars del matcher (HF Space):** `IDENTITY_PROVIDER=testnet` (`dev` **prohibido** en prod),
+**Matcher env vars (HF Space):** `IDENTITY_PROVIDER=testnet` (`dev` **forbidden** in prod),
 `MATCH_THRESHOLD=0.6`, `OCR_MAX_DIM` (def 2000), `STRICT_DATA_CHECK=true` (default),
-`DEDUP_PEPPER` (**obligatorio** en prod), `CORS_ORIGIN` (restrictivo; no `*` en prod),
-`RATE_LIMIT_*`, `ENROLL_SESSION_TTL_MS`, `UPSTASH_REDIS_REST_URL/TOKEN` (persistencia opcional),
+`DEDUP_PEPPER` (**required** in prod), `CORS_ORIGIN` (restrictive; not `*` in prod),
+`RATE_LIMIT_*`, `ENROLL_SESSION_TTL_MS`, `UPSTASH_REDIS_REST_URL/TOKEN` (optional persistence),
 `FACE_MODELS_PATH`.
 
-### ⚠️ Gotcha crítico: el matcher se deploya desde la rama `hf-space`, NO desde `main`
-HF rechaza binarios en git, así que el Space se construye de una **rama recortada** (`hf-space`,
-orphan: solo `identity/issuer` + `packages/*`, con los `.wasm` de Poseidon en **base64** que el
-Dockerfile decodifica). Para deployar un cambio del matcher:
-1. Hacé el cambio en `main` (y pusheá a `main`).
-2. `git checkout hf-space` → `git checkout main -- identity/issuer/matcher/<archivos>` → commit.
-3. `git push <hf-space-remote-con-token> hf-space:main` (el push a HF lo corre el owner por el token).
-4. HF rebuildea solo. `git checkout main` para volver.
-> El Dockerfile y el README del Space viven en la rama `hf-space`.
+### ⚠️ Critical gotcha: matcher deploys from `hf-space` branch, NOT from `main`
+HF rejects binaries in git, so the Space is built from a **trimmed branch** (`hf-space`,
+orphan: only `identity/issuer` + `packages/*`, with Poseidon `.wasm` in **base64** that the
+Dockerfile decodes). To deploy a matcher change:
+1. Make the change on `main` (and push to `main`).
+2. `git checkout hf-space` → `git checkout main -- identity/issuer/matcher/<files>` → commit.
+3. `git push <hf-space-remote-with-token> hf-space:main` (HF push run by owner with token).
+4. HF rebuilds automatically. `git checkout main` to return.
+> Dockerfile and Space README live on `hf-space` branch.
 
-Otros gotchas:
-- **Render auto-deploy NO dispara solo** (webhook GitHub no conectado) — los otros backends
-  (platform/funding API) se deployan a mano vía la Render API.
-- **Tests de tfjs (`match.test.ts`, `enroll.test.ts`) fallan en local con Node 25** (binarios
-  de tfjs-node no soportan Node 25). En el Space (Node 20) andan. Los tests puros sí corren local.
-
----
-
-## 4. Decisiones e invariantes (NO romper sin avisar)
-
-- **El gate REAL de prueba de persona es el match facial DNI↔selfie + liveness** (`/enroll`).
-  El OCR (Tesseract) es un heurístico ruidoso de testnet.
-- **Cotejo datos↔OCR (`/verify-data`)**: con `STRICT_DATA_CHECK=true` (default) cualquier
-  mismatch fuerte bloquea; modo blando: `STRICT_DATA_CHECK=false`. Matching **fuzzy**
-  (confusiones de dígitos, Levenshtein ≤1). OCR vacío/ilegible **nunca** es mismatch solo.
-- **Privacidad**: PII va al matcher por HTTPS, se procesa en memoria (no disco ni logs con
-  valores); el nº de documento solo para de-dup (`sha256(docId+DEDUP_PEPPER)`), nunca en claro.
-  On-chain: commitment, nullifier, proof — nunca PII.
-- **Nullifier global** `Poseidon(secret)`: anti-Sybil real (una persona no registra N wallets).
-  El **address binding** sigue vía `addressHash` (public input) + `require_auth` en el contrato.
-- **Atestación issuer = Merkle-only** (Poseidon). No hay firma EdDSA.
-- **Identidad anónima desacoplada de la wallet** (el `platformId` se deriva de la credencial ZK
-  del device). No vincular wallet ↔ identidad on-chain.
-- **No cambies el circuito ni el contrato** sin coordinar (rompe compatibilidad de pruebas/VK).
-  Si cambiás el circuito, regenerá y re-commiteá `web/public/circuits/*` y re-deployá un contrato
-  nuevo (el `trusted_root` y la VK se fijan en `init`).
-- Revisión humana obligatoria de la cripto (nullifier, address binding, issuer root).
+Other gotchas:
+- **Render auto-deploy does NOT trigger alone** (GitHub webhook not connected) — other backends
+  (platform/funding API) deploy manually via Render API.
+- **tfjs tests (`match.test.ts`, `enroll.test.ts`) fail locally on Node 25** (tfjs-node binaries
+  don't support Node 25). On Space (Node 20) they work. Pure tests run locally.
 
 ---
 
-## 5. Correr local
+## 4. Decisions and invariants (do NOT break without notice)
+
+- **The REAL personhood gate is ID↔selfie facial match + liveness** (`/enroll`).
+  OCR (Tesseract) is a noisy testnet heuristic.
+- **Data↔OCR cross-check (`/verify-data`)**: with `STRICT_DATA_CHECK=true` (default) any
+  strong mismatch blocks; soft mode: `STRICT_DATA_CHECK=false`. **Fuzzy** matching
+  (digit confusions, Levenshtein ≤1). Empty/illegible OCR is **never** mismatch alone.
+- **Privacy**: PII goes to matcher over HTTPS, processed in memory (no disk or value logs);
+  document number only for de-dup (`sha256(docId+DEDUP_PEPPER)`), never in clear.
+  On-chain: commitment, nullifier, proof — never PII.
+- **Global nullifier** `Poseidon(secret)`: real anti-Sybil (one person cannot register N wallets).
+  **Address binding** via `addressHash` (public input) + `require_auth` on contract.
+- **Issuer attestation = Merkle-only** (Poseidon). No EdDSA signature.
+- **Anonymous identity decoupled from wallet** (`platformId` derived from device ZK credential).
+  Do not link wallet ↔ on-chain identity.
+- **Do not change circuit or contract** without coordinating (breaks proof/VK compatibility).
+  If you change the circuit, regenerate and re-commit `web/public/circuits/*` and deploy a new
+  contract (`trusted_root` and VK are fixed at `init`).
+- Mandatory human review of crypto (nullifier, address binding, issuer root).
+
+---
+
+## 5. Run locally
 
 ```bash
 npm install
-cp .env.example .env            # completá VITE_MATCHER_URL=http://localhost:8787, etc.
-npm run -w @behuman/issuer download-models   # baja los modelos face-api (una vez)
-npm run -w @behuman/issuer serve             # matcher en :8787
-npm run dev                                  # frontend Vite en :5173
-# Contrato: stellar contract build && scripts/deploy_testnet.sh
+cp .env.example .env            # fill VITE_MATCHER_URL=http://localhost:8787, etc.
+npm run -w @behuman/issuer download-models   # download face-api models (once)
+npm run -w @behuman/issuer serve             # matcher on :8787
+npm run dev                                  # Vite frontend on :5173
+# Contract: stellar contract build && scripts/deploy_testnet.sh
 ```
-Tests puros del matcher: `npx vitest run --root identity/issuer identity/issuer/matcher/__tests__/documentCheck.test.ts`
+Pure matcher tests: `npx vitest run --root identity/issuer identity/issuer/matcher/__tests__/documentCheck.test.ts`
 
 ---
 
-## 6. Cómo pushear a main (workflow del equipo)
+## 6. How to push to main (team workflow)
 
-- El repo canónico es **[behuman-org/human-zk](https://github.com/behuman-org/human-zk)** — entrega
-  **Stellar Hacks: Real-World ZK**. Se trabaja **directo sobre
-  `main`** con autorización del owner (sus credenciales de GitHub). Hacé commits convencionales
-  (`feat:`, `fix:`, `chore:`…). Los agentes cierran el mensaje con
+- Canonical repo is **[behuman-org/human-zk](https://github.com/behuman-org/human-zk)** — delivery for
+  **Stellar Hacks: Real-World ZK**. Work **directly on
+  `main`** with owner authorization (their GitHub credentials). Use conventional commits
+  (`feat:`, `fix:`, `chore:`…). Agents close messages with
   `Co-Authored-By: Claude <noreply@anthropic.com>`.
-- Antes de pushear: `npm run -w web build` (typecheck) y los tests puros del matcher.
-- Tras pushear lógica del matcher, **acordate del gotcha de la rama `hf-space`** (§3) para que el
-  cambio llegue al Space en producción — pushear a `main` solo NO redeploya el matcher.
+- Before push: `npm run -w web build` (typecheck) and pure matcher tests.
+- After pushing matcher logic, **remember the `hf-space` branch gotcha** (§3) so the change
+  reaches production Space — pushing to `main` alone does NOT redeploy the matcher.
 
-## 7. Próximos pasos sugeridos (backlog KYC)
-- Provider `renaper` real (hoy `testnetProvider` es heurístico). Liveness certificado.
-- KYC regulado real (reemplazar issuer mock). Trusted setup de producción.
-- Sincronizar matcher HF Space tras cada cambio en `main` (gotcha §3).
+## 7. Suggested next steps (KYC backlog)
+- Real `renaper` provider (today `testnetProvider` is heuristic). Certified liveness.
+- Real regulated KYC (replace mock issuer). Production trusted setup.
+- Sync matcher HF Space after each change on `main` (gotcha §3).

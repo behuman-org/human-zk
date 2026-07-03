@@ -1,135 +1,134 @@
-# Capa 1 — Identidad KYC-ZK (matcher DNI + selfie)
+# Layer 1 — KYC-ZK Identity (ID + selfie matcher)
 
-> Puente a la vault: `06 - Implementacion/Spec — Matcher DNI + Selfie (Capa 1)`,
+> Vault bridge: `06 - Implementacion/Spec — Matcher DNI + Selfie (Capa 1)`,
 > `05 - Arquitectura/Matcher de Identidad (Gate de Capa 1)`, `Flujo de KYC`,
-> carpeta `KYC-Identidad/`.
+> `KYC-Identidad/` folder.
 
-## Qué hace
+## What it does
 
-Una persona prueba que es **real y única** sin revelar quién es:
+A person proves they are **real and unique** without revealing who they are:
 
-1. **Gate (testnet):** sube la foto del DNI + escanea su cara con la cámara. El backend
-   hace **face match 1:1** (DNI ↔ cámara) + **liveness** (challenge). Solo si pasa, sigue.
-2. **Issuer:** crea la identidad de Capa 1 (commitment en un árbol Merkle de humanos
-   verificados), con **de-dup anti-Sybil** por hash del documento. Descarta la PII.
-3. **Prueba ZK:** el device genera la prueba Groth16 (BLS12-381) — la PII/secret nunca sale.
-4. **On-chain:** `verify_and_register` en `kyc_verifier` (Soroban) → `Verified(address)` +
-   nullifier (anti doble registro). Las dApps consultan `is_verified(address)`.
+1. **Gate (testnet):** upload ID photo + scan face with the camera. The backend runs
+   **1:1 face match** (ID ↔ camera) + **liveness** (challenge). Only if it passes, continue.
+2. **Issuer:** creates Layer 1 identity (commitment in a Merkle tree of verified humans),
+   with **anti-Sybil de-dup** by document hash. Discards PII.
+3. **ZK proof:** the device generates the Groth16 proof (BLS12-381) — PII/secret never leaves.
+4. **On-chain:** `verify_and_register` on `kyc_verifier` (Soroban) → `Verified(address)` +
+   nullifier (anti double registration). dApps query `is_verified(address)`.
 
 ```
-[web] consent + DNI + cara  →  [issuer/matcher] gate  →  [issuer] identidad + árbol
-                                                       →  [sdk] prueba ZK
+[web] consent + ID + face  →  [issuer/matcher] gate  →  [issuer] identity + tree
+                                                       →  [sdk] ZK proof
                                                        →  [kyc_verifier] Verified(address)
 ```
 
-## Garantías de privacidad (Ley 25.326)
+## Privacy guarantees (Law 25.326)
 
-- **Cero PII on-chain**: solo commitment / proof / nullifier / issuerRoot / predicados.
-- Imágenes **efímeras** (en memoria, nunca a disco), **nunca** en logs.
-- De-dup guarda **solo** `sha256(docId + pepper)`, nunca el documento.
-- Consentimiento explícito antes de capturar.
+- **Zero PII on-chain**: only commitment / proof / nullifier / issuerRoot / predicates.
+- Images are **ephemeral** (in memory, never to disk), **never** in logs.
+- De-dup stores **only** `sha256(docId + pepper)`, never the document.
+- Explicit consent before capture.
 
-## Alcance y mocks (testnet)
+## Scope and mocks (testnet)
 
-- **Matcher de prueba** (face-api), **no** RENAPER. No valida autenticidad del documento
-  ni hace AML. Liveness = challenge activo, **no** PAD certificado iBeta.
-- El provider es **intercambiable por config** (`IDENTITY_PROVIDER`): `testnet` (hoy),
-  `dev` (solo tests/e2e, aprueba sin biometría), `renaper` (stub de producción). Cambiar de
-  uno a otro **no toca** issuer ni la capa ZK.
-- **Curva BLS12-381** (no BN254): el verificador Groth16 oficial usa las host functions
-  BLS12-381 (CAP-0059). Detalle en `identity/circuits/README.md` y el README del contrato.
-- `trusted_root` se fija en `init`: el e2e despliega un contrato por demo. Un registro
-  multi-usuario con root incremental es trabajo futuro.
+- **Demo matcher** (face-api), **not** RENAPER. Does not validate document authenticity
+  or run AML. Liveness = active challenge, **not** iBeta-certified PAD.
+- Provider is **swappable by config** (`IDENTITY_PROVIDER`): `testnet` (today),
+  `dev` (tests/e2e only, approves without biometrics), `renaper` (production stub). Switching
+  providers **does not touch** issuer or the ZK layer.
+- **BLS12-381 curve** (not BN254): the official Groth16 verifier uses
+  BLS12-381 host functions (CAP-0059). Details in `identity/circuits/README.md` and the contract README.
+- `trusted_root` is fixed at `init`: e2e deploys one contract per demo. Multi-user
+  incremental root is future work.
 
-## Decisiones (defaults documentados)
+## Decisions (documented defaults)
 
-| Decisión | Default |
+| Decision | Default |
 |---|---|
-| Umbral de match | `MATCH_THRESHOLD=0.6` (distancia euclidiana face-api; calibrar) |
-| Secret | **user-side / no-custodial** (el issuer nunca lo ve) |
-| Liveness | challenge activo (parpadeo/giro) + anti-foto-estática |
+| Match threshold | `MATCH_THRESHOLD=0.6` (face-api Euclidean distance; calibrate) |
+| Secret | **user-side / non-custodial** (issuer never sees it) |
+| Liveness | active challenge (blink/turn) + anti-static-photo |
 | Backend | Node/TypeScript (face-api + tfjs-node) |
 
-## Correr todo
+## Run everything
 
 ```bash
 npm install
 npm run download-models -w @behuman/issuer
 
-# circuito (una vez)
+# circuit (once)
 cd identity/circuits && npm install && bash scripts/compile.sh && POWER=13 bash scripts/setup.sh && cd ../..
 
 # gate + UI
-npm run serve -w @behuman/issuer      # backend en :8787
-npm run dev   -w @behuman/web         # frontend (cámara) en :5173
+npm run serve -w @behuman/issuer      # backend on :8787
+npm run dev   -w @behuman/web         # frontend (camera) on :5173
 
-# e2e on-chain (deploy + register + verify en testnet, vía SDK en Node)
+# on-chain e2e (deploy + register + verify on testnet, via SDK in Node)
 bash scripts/e2e_demo.sh
 ```
 
-## Registro on-chain desde el FRONTEND (wallet + prueba ZK en el navegador)
+## On-chain registration from the FRONTEND (wallet + ZK proof in the browser)
 
-El front genera la prueba en el navegador, conecta wallet (Stellar Wallets Kit), llama
-`verify_and_register` y muestra `is_verified == true`.
+The frontend generates the proof in the browser, connects a wallet (Stellar Wallets Kit), calls
+`verify_and_register` and shows `is_verified == true`.
 
-Requisitos: una wallet (Freighter/xBull/LOBSTR) en **testnet** y **fondeada** (friendbot).
+Requirements: a wallet (Freighter/xBull/LOBSTR) on **testnet** and **funded** (friendbot).
 
 ```bash
-# 1) circuito compilado + trusted setup (una vez)
+# 1) compiled circuit + trusted setup (once)
 (cd identity/circuits && npm install && bash scripts/compile.sh && POWER=13 bash scripts/setup.sh)
 
-# 2) modelos del matcher (una vez)
+# 2) matcher models (once)
 npm run download-models -w @behuman/issuer
 
-# 3) desplegar un contrato FRESCO (sin init: el front lo inicializa) y resetear el issuer
+# 3) deploy a FRESH contract (no init: frontend initializes) and reset issuer
 rm -f identity/issuer/.issuer-state.json
-bash scripts/deploy_testnet.sh          # imprime KYC_VERIFIER_CONTRACT_ID
+bash scripts/deploy_testnet.sh          # prints KYC_VERIFIER_CONTRACT_ID
 
-# 4) poner ese id en .env (el front lo lee por envDir=raíz)
+# 4) put that id in .env (frontend reads it via envDir=root)
 #    VITE_KYC_VERIFIER_CONTRACT_ID=<id>
 
-# 5) levantar backend + front
+# 5) start backend + frontend
 npm run serve -w @behuman/issuer        # :8787
-npm run dev   -w @behuman/web           # :5173  (copia artefactos a web/public/circuits)
+npm run dev   -w @behuman/web           # :5173  (copies artifacts to web/public/circuits)
 ```
 
-En el navegador: conectar wallet → consentimiento → foto DNI → datos → escaneo de cara.
-El front: calcula commitment, enrola (gate + de-dup), genera la prueba ZK, inicializa el
-contrato con el `issuerRoot` y firma `verify_and_register`; al final muestra
-`is_verified(address) == true` + link a la tx.
+In the browser: connect wallet → consent → ID photo → data → face scan.
+The frontend: computes commitment, enrolls (gate + de-dup), generates ZK proof, initializes the
+contract with `issuerRoot` and signs `verify_and_register`; finally shows
+`is_verified(address) == true` + link to the tx.
 
-> ⚠️ **root fijo en `init`** (el contrato no se modifica): cada demo usa un contrato propio.
-> El primer usuario inicializa el contrato con su raíz; para otra persona, desplegar otro.
-> Evolución (no en esta tanda): raíz incremental / función admin de actualización.
+> ⚠️ **Fixed root at `init`** (contract is immutable): each demo uses its own contract.
+> The first user initializes the contract with their root; for another person, deploy another.
+> Evolution (not in this batch): incremental root / admin update function.
 
-### Anti-Sybil — dos candados (ambos visibles desde el front)
-1. **De-dup por documento** (off-chain, issuer): `sha256(docId + DEDUP_PEPPER)` — no se
-   guarda el número. Reintento con el mismo documento → "este documento ya fue validado".
-2. **Nullifier on-chain** (`verify_and_register`): reenviar la misma prueba → rechazo
-   `NullifierAlreadyUsed` (botón "probar candado de nullifier" en la pantalla final).
+### Anti-Sybil — two locks (both visible from the frontend)
+1. **Document de-dup** (off-chain, issuer): `sha256(docId + DEDUP_PEPPER)` — document number
+   is not stored. Retry with the same document → "this document was already validated".
+2. **On-chain nullifier** (`verify_and_register`): resubmitting the same proof → rejection
+   `NullifierAlreadyUsed` ("test nullifier lock" button on the final screen).
 
-### Contratos desplegados (testnet)
-- e2e (SDK, init incluido): `CBRBOJRALKORUSHKCHPUBA3DBTYKGLYONHNJVC4MUXHZ46EOWMZQOY34`
-- demo front (deploy fresco, init desde el front): `CAMOAESW7NUT5EZAFNX7UF74H5HHLLWLY5TCQJF3CPWR6YZLIL7T6IBI`
+### Deployed contracts (testnet)
+- e2e (SDK, init included): `CBRBOJRALKORUSHKCHPUBA3DBTYKGLYONHNJVC4MUXHZ46EOWMZQOY34`
+- frontend demo (fresh deploy, init from frontend): `CAMOAESW7NUT5EZAFNX7UF74H5HHLLWLY5TCQJF3CPWR6YZLIL7T6IBI`
 
-> Nota: el flujo on-chain (init + verify_and_register + is_verified) está probado de punta
-> a punta en testnet vía `scripts/e2e_demo.sh`. El encoding BLS y el addressHash del
-> navegador son espejos validados del SDK; la firma con wallet y la prueba en el navegador
-> se verifican manualmente desde el front.
+> Note: the on-chain flow (init + verify_and_register + is_verified) is end-to-end tested on
+> testnet via `scripts/e2e_demo.sh`. BLS encoding and browser addressHash mirror the validated SDK;
+> wallet signing and browser proof are verified manually from the frontend.
 
 ## Tests
 
 ```bash
 npm test -w @behuman/issuer   # gate (match/liveness) + enroll/de-dup
-npm test -w @behuman/sdk      # poseidon/merkle/encoding/prueba off-chain
-cargo test -p kyc_verifier    # contrato (pairing + registro)
+npm test -w @behuman/sdk      # poseidon/merkle/encoding/off-chain proof
+cargo test -p kyc_verifier    # contract (pairing + registration)
 ```
 
-## Criterios de aceptación
+## Acceptance criteria
 
-- DNI + cara que coinciden → identidad creada y `Verified(address)` en testnet.
-- Cara distinta → rechazo (no se crea identidad).
-- Foto estática → rechazada por liveness.
-- Segundo intento de la misma persona → rechazado (de-dup + nullifier).
-- Cero PII en logs y on-chain.
-- Provider intercambiable por config.
+- Matching ID + face → identity created and `Verified(address)` on testnet.
+- Different face → rejection (no identity created).
+- Static photo → rejected by liveness.
+- Second attempt by the same person → rejected (de-dup + nullifier).
+- Zero PII in logs and on-chain.
+- Provider swappable by config.

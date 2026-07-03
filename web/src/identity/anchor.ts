@@ -26,7 +26,7 @@ async function ensureRegistered(kp: StellarSdk.Keypair, idProof: Awaited<ReturnT
 /** Ancla `text` on-chain (prueba ZK + opinion_board.post). Requiere credencial Capa 1. */
 export async function anchorText(text: string): Promise<Anchored> {
   const cred = loadAnyCredential();
-  if (!cred) throw new Error("necesitas_verificarte");
+  if (!cred) throw new Error("verification_required");
 
   const contentHash = await contentHashField(text);
   const proof = await generatePlatformProof(cred, contentHash);
@@ -71,7 +71,7 @@ export interface Quote {
  */
 export async function quoteText(text: string): Promise<Quote> {
   const cred = loadAnyCredential();
-  if (!cred) throw new Error("necesitas_verificarte");
+  if (!cred) throw new Error("verification_required");
 
   const contentHash = await contentHashField(text);
   const postProof = await generatePlatformProof(cred, contentHash);

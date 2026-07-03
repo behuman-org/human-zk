@@ -1,4 +1,4 @@
-// Guard de rutas /app/* — exige sesión activa + credencial + verificación on-chain.
+// Route guard for /app/* — requires active session + credential + on-chain verification.
 import { Navigate, useLocation } from "react-router-dom";
 import type { ReactNode } from "react";
 import { hasCredential } from "../identity/identity";
@@ -20,7 +20,7 @@ export function AppGuard({ children }: { children: ReactNode }) {
   if (verificationState === "checking") {
     return (
       <div className="feed-state feed-state--loading" role="status">
-        <p className="feed-state__message">Verificando identidad on-chain…</p>
+        <p className="feed-state__message">Verifying on-chain identity…</p>
       </div>
     );
   }
@@ -29,7 +29,7 @@ export function AppGuard({ children }: { children: ReactNode }) {
     return (
       <div className="feed-state feed-state--error">
         <p className="feed-state__message feed-state__message--err">
-          No pudimos confirmar tu verificación on-chain (error de red). Reintentá en unos segundos.
+          Could not confirm your on-chain verification (network error). Try again in a few seconds.
         </p>
       </div>
     );

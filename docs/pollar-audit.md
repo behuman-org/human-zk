@@ -1,91 +1,90 @@
-# Auditoría — integración de Pollar (onboarding por email/Google)
+# Audit — Pollar integration (email/Google onboarding)
 
-Revisión del funcionamiento correcto y del respeto a los invariantes ZK de la integración de
-Pollar (rama `pollar-onboarding`). Foco: que Pollar **solo cree la wallet** y que el anonimato
-**nunca** dependa de él.
+Review of correct operation and respect for ZK invariants in the Pollar integration
+(`pollar-onboarding` branch). Focus: Pollar **only creates the wallet** and anonymity
+**never** depends on it.
 
-## Veredicto
+## Verdict
 
-✅ **Aprobada.** La integración respeta los 5 invariantes. Pollar está **contenido** (3 archivos),
-se usan **solo** `openLoginModal` + `isAuthenticated` (nunca `walletAddress`, `sendPayment` ni
-firma), el email no toca beHuman, y las acciones anónimas siguen por credencial ZK + efímeras.
-Hay 2 observaciones menores (no bloquean) y notas de config.
+✅ **Approved.** The integration respects all 5 invariants. Pollar is **contained** (3 files),
+uses **only** `openLoginModal` + `isAuthenticated` (never `walletAddress`, `sendPayment`, or
+signing), email never touches beHuman, and anonymous actions still go through ZK credential + ephemerals.
+Two minor observations (non-blocking) and config notes.
 
-## Invariantes — verificación
+## Invariants — verification
 
-| # | Invariante | Resultado | Evidencia |
+| # | Invariant | Result | Evidence |
 |---|---|---|---|
-| 1 | `secret`/`platformId` solo client-side | ✅ | `KycFlow.processCredentialOnly` usa `randomSecret()` + `computeCommitment` + `enroll` → `saveCredential` (credentialStore). El secret nunca se envía. |
-| 2 | Pollar = wallet de entrada; las anónimas no la usan, Pollar no firma | ✅ | `usePollar()` solo lee `openLoginModal` + `isAuthenticated`. **No** se usa `walletAddress`, `sendPayment`, `signAndSubmitTx` ni `signTx` en ningún lado. |
-| 3 | Efímeras fondeadas por friendbot, nunca desde Pollar | ✅ | `platform/ephemeral.ts` usa friendbot; no hay transferencia desde la wallet de Pollar. |
-| 4 | El email no toca beHuman; sin mapeo email↔platformId | ✅ | El email vive solo en el modal/SDK de Pollar. `walletAddress` nunca se guarda junto al `platformId`; no se envía a `/content`, `/articles`, `/campaigns`, `/profile`. |
-| 5 | Se SUMA a Freighter (no reemplaza) | ✅ | Freighter (Wallets Kit) intacto en `handleLogin`. Pollar gateado por `POLLAR_ENABLED` (si no hay key, queda oculto y la app funciona igual). |
+| 1 | `secret`/`platformId` client-side only | ✅ | `KycFlow.processCredentialOnly` uses `randomSecret()` + `computeCommitment` + `enroll` → `saveCredential` (credentialStore). Secret never sent. |
+| 2 | Pollar = entry wallet; anonymous actions don't use it, Pollar doesn't sign | ✅ | `usePollar()` only reads `openLoginModal` + `isAuthenticated`. **No** use of `walletAddress`, `sendPayment`, `signAndSubmitTx`, or `signTx` anywhere. |
+| 3 | Ephemerals funded by friendbot, never from Pollar | ✅ | `platform/ephemeral.ts` uses friendbot; no transfer from Pollar wallet. |
+| 4 | Email never touches beHuman; no email↔platformId mapping | ✅ | Email lives only in Pollar modal/SDK. `walletAddress` never stored with `platformId`; not sent to `/content`, `/articles`, `/campaigns`, `/profile`. |
+| 5 | ADDS to Freighter (does not replace) | ✅ | Freighter (Wallets Kit) intact in `handleLogin`. Pollar gated by `POLLAR_ENABLED` (without key, hidden and app works the same). |
 
-## Superficie de la integración (contenida)
+## Integration surface (contained)
 
-- `web/src/identity/pollar.tsx` — `PollarRoot` (provider) + `PollarEmailLogin` (modal email/Google).
-- `web/src/main.tsx` — monta `PollarRoot`.
-- `web/src/pages/AuthPage.tsx` — botón "Crear cuenta con Google o email" → `/onboarding?via=email`.
-- `web/src/kyc/KycFlow.tsx` — `mode="credential"`: matcher → credencial ZK, **sin** wallet/on-chain.
-- `web/src/pages/OnboardingPage.tsx` — `?via=email` → modo credencial + aviso de firewall.
+- `web/src/identity/pollar.tsx` — `PollarRoot` (provider) + `PollarEmailLogin` (email/Google modal).
+- `web/src/main.tsx` — mounts `PollarRoot`.
+- `web/src/pages/AuthPage.tsx` — "Create account with Google or email" button → `/onboarding?via=email`.
+- `web/src/kyc/KycFlow.tsx` — `mode="credential"`: matcher → ZK credential, **no** wallet/on-chain.
+- `web/src/pages/OnboardingPage.tsx` — `?via=email` → credential mode + firewall notice.
 
-## Funcionamiento correcto
+## Correct operation
 
-- **Login**: funciona (verificado en testnet con la `pub_testnet_…`). El `403/CORS` previo era por
-  usar una key `pat_` (Personal Access Token) en vez de la publishable — resuelto.
-- **Build**: `typecheck` 0 errores · `vite build` verde.
-- **Credential mode**: confirmado que no toca address ni on-chain; el flujo es 100% client-side.
+- **Login**: works (verified on testnet with `pub_testnet_…`). Previous `403/CORS` was from
+  using a `pat_` key (Personal Access Token) instead of publishable — resolved.
+- **Build**: `typecheck` 0 errors · `vite build` green.
+- **Credential mode**: confirmed it does not touch address or on-chain; flow is 100% client-side.
 
-## Observaciones menores (no bloquean)
+## Minor observations (non-blocking)
 
-- **O1 · UX post-login (media-baja):** tras el login, la navegación a `/onboarding` dispara en
-  `isAuthenticated`, pero Pollar puede seguir en estado `creating` (crear la wallet custodial) →
-  el usuario ve el "Loading..." del modal de Pollar encima. Es provisioning de Pollar (no un bug
-  de beHuman). Si se cuelga, suele faltar la **gas wallet** de la app en el dashboard de Pollar
-  (crea/patrocina la wallet). Mejora posible: navegar/avanzar al onboarding sin esperar la wallet
-  (no se necesita para el flujo anónimo).
-- **O2 · Override de config (baja):** `PollarRoot` pasa `appConfig` forzando `emailEnabled`+`google`
-  → **omite** el `/applications/config` remoto (pierde estilos reales y puede mostrar un método no
-  habilitado server-side). Recomendado: con los métodos ya activados en el dashboard, **quitar el
-  override** y dejar que la config remota maneje qué proveedores se muestran.
+- **O1 · Post-login UX (medium-low):** after login, navigation to `/onboarding` triggers on
+  `isAuthenticated`, but Pollar may still be in `creating` state (creating custodial wallet) →
+  user sees Pollar modal "Loading..." overlay. This is Pollar provisioning (not a beHuman bug).
+  If it hangs, usually missing **gas wallet** for the app in Pollar dashboard
+  (create/sponsor wallet). Possible improvement: navigate/advance to onboarding without waiting for wallet
+  (not needed for anonymous flow).
+- **O2 · Config override (low):** `PollarRoot` passed forced `appConfig` with `emailEnabled`+`google`
+  → **skips** remote `/applications/config` (loses real styles and may show a server-disabled method).
+  Recommended: with methods already enabled in dashboard, **remove override**
+  and let remote config handle which providers show.
 
-## Notas de seguridad
+## Security notes
 
-- **N1 · Rotar la secret key:** durante el setup se compartió una `sec_testnet_…` por chat. No se
-  usa en el cliente (nuestro flujo no la necesita) y NO está en el repo, pero **debe rotarse**.
-- **N2 · Key correcta:** el navegador usa la **publishable** `pub_testnet_…` (segura, pública), en
-  `.env` (gitignored). La secret nunca va al cliente.
-- **N3 · Correlación por timing (informativo):** Pollar conoce `email→wallet→hora`; beHuman conoce
-  `platformId→hora`. No hay identificador compartido (firewall OK), pero la correlación temporal es
-  una limitación general ya documentada (mitigación futura: separar en el tiempo KYC ↔ actividad).
+- **N1 · Rotate secret key:** during setup a `sec_testnet_…` was shared via chat. Not used in
+  client (our flow doesn't need it) and NOT in repo, but **must be rotated**.
+- **N2 · Correct key:** browser uses **publishable** `pub_testnet_…` (safe, public), in
+  `.env` (gitignored). Secret never goes to client.
+- **N3 · Timing correlation (informational):** Pollar knows `email→wallet→time`; beHuman knows
+  `platformId→time`. No shared identifier (firewall OK), but temporal correlation is a
+  general limitation already documented (future mitigation: separate KYC ↔ activity in time).
 
-## Conclusión
+## Conclusion
 
-La integración **cumple su objetivo** (onboarding fácil por email/Google) **sin sacrificar el
-anonimato ZK**. Ningún hallazgo compromete los invariantes.
+The integration **meets its goal** (easy email/Google onboarding) **without sacrificing ZK
+anonymity**. No finding compromises the invariants.
 
-### Mejoras aplicadas (post-auditoría)
+### Improvements applied (post-audit)
 
-- **O1 (revisado) ✅:** decisión de producto: el usuario **sí quiere que Pollar genere la
-  wallet** antes de arrancar el KYC. Ahora `PollarEmailLogin` espera a `walletAddress` (wallet
-  realmente provisionada) y recién ahí avanza al KYC. Para no dejar a nadie atascado si el
-  provisioning se cuelga, tras 25 s ofrece **"Continuar al KYC"** igual (la identidad anónima
-  no depende de esa wallet). Reemplaza el O1 previo (navegar solo con `isAuthenticated`).
-- **O2 ✅:** se quitó el override de `appConfig`. El modal usa la **config real** del dashboard
-  (métodos habilitados + estilos/logo de la app).
+- **O1 (revised) ✅:** product decision: user **does want Pollar to generate the
+  wallet** before starting KYC. Now `PollarEmailLogin` waits for `walletAddress` (wallet
+  actually provisioned) before advancing to KYC. To avoid users stuck if provisioning hangs, after
+  25 s offers **"Continue to KYC"** anyway (anonymous identity does not depend on that wallet).
+  Replaces previous O1 (navigate on `isAuthenticated` only).
+- **O2 ✅:** removed `appConfig` override. Modal uses **real** dashboard config
+  (enabled methods + app styles/logo).
 
-### ⚠️ Requisito de dashboard de Pollar (causa del "Loading..." colgado)
+### ⚠️ Pollar dashboard requirement (cause of hung "Loading...")
 
-El "Loading..." infinito tras iniciar sesión **no es un bug del código**: es Pollar
-provisionando la wallet custodial. Según sus docs, la creación requiere que en el **dashboard de
-Pollar** estén configurados/fondeados:
+Infinite "Loading..." after login **is not a code bug**: Pollar is provisioning the custodial wallet.
+Per their docs, creation requires in the **Pollar dashboard**:
 
-- **Funding wallet** con XLM (≈1–2.5 XLM por usuario para reservas).
-- **Gas wallet** con XLM (cubre fees de las tx de creación).
-- Al menos **un asset/trustline** en *Wallet Infrastructure → Tokens/Trustlines*.
-- **Funding Mode** = *Immediate* (*Configuration → Funding Mode*) para que la wallet quede
-  activa al login (~2 s).
+- **Funding wallet** with XLM (~1–2.5 XLM per user for reserves).
+- **Gas wallet** with XLM (covers creation tx fees).
+- At least **one asset/trustline** in *Wallet Infrastructure → Tokens/Trustlines*.
+- **Funding Mode** = *Immediate* (*Configuration → Funding Mode*) so wallet is
+  active on login (~2 s).
 
-Sin eso, `walletAddress` nunca se puebla y el modal queda en "Loading...". Diagnóstico:
-*Dashboard → Observability → Logs*. (El flujo KYC anónimo de beHuman **no** necesita esa
-wallet; por eso ofrecemos el botón de continuar igual.)
+Without that, `walletAddress` never populates and modal stays on "Loading...". Diagnosis:
+*Dashboard → Observability → Logs*. (beHuman anonymous KYC flow **does not** need that
+wallet; hence the continue button anyway.)

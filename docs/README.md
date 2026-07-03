@@ -1,34 +1,34 @@
 # docs · human
 
-Este repo (`human`) es **solo código**. Todo el **diseño, la teoría y las decisiones**
-del producto viven en la **vault de Obsidian**, en el repo hermano `obsidian-vault-zk`.
+This repo (`human`) is **code only**. All product **design, theory, and decisions**
+live in the **Obsidian vault**, in the sibling repo `obsidian-vault-zk`.
 
-## Mapa: documentación ↔ código
+## Map: documentation ↔ code
 
-| Documentación (vault) | Componente de este repo |
+| Documentation (vault) | Component in this repo |
 |---|---|
-| `IDEA`, `Prueba de Persona Única` | la visión de las dos capas |
+| `IDEA`, `Prueba de Persona Única` | the two-layer vision |
 | `Flujo de KYC` | `packages/sdk/` + `scripts/e2e_demo.sh` |
 | `Diseño del Circuito ZK` | `identity/circuits/src/kyc.circom` |
 | `Contrato Verificador (Soroban)` | `identity/contracts/kyc_verifier/src/lib.rs` |
-| `Modelo de Datos` | credencial en `identity/issuer/`, storage en `identity/contracts/` |
+| `Modelo de Datos` | credential in `identity/issuer/`, storage in `identity/contracts/` |
 | `Plataforma de Opinión Verificada` | `platform/contracts/opinion_board` + `platform/api` |
 | `Curaduría y Agentes Validadores` | `platform/curation` |
-| `Identidad Pública vs Anónima` | modelo de identidad de `platform/` (seudónimo estable) |
-| `09 - Tools/Plan de armado con IA` | guía paso a paso para desarrollar |
-| `Estructura del Codigo` | esta misma estructura de monorepo |
+| `Identidad Pública vs Anónima` | `platform/` identity model (stable pseudonym) |
+| `09 - Tools/Plan de armado con IA` | step-by-step development guide |
+| `Estructura del Codigo` | this same monorepo structure |
 
-## Cómo abrir la documentación
+## How to open the documentation
 
-1. Instalá [Obsidian](https://obsidian.md).
-2. *Open folder as vault* → seleccioná la carpeta `obsidian-vault-zk`.
-3. Empezá por `00 - Inicio/🏠 Home`.
+1. Install [Obsidian](https://obsidian.md).
+2. *Open folder as vault* → select the `obsidian-vault-zk` folder.
+3. Start at `00 - Inicio/🏠 Home`.
 
-> 🔗 Cuando el repo de docs sea público, enlazar acá su URL.
+> 🔗 When the docs repo is public, link its URL here.
 
-## Hackathon y migración (repo)
+## Hackathon and migration (repo)
 
-| Doc | Para qué |
-|-----|----------|
-| [`hackathon-real-world-zk.md`](./hackathon-real-world-zk.md) | Checklist y pitch para **Stellar Hacks: Real-World ZK** |
-| [`migracion-repo-zk.md`](./migracion-repo-zk.md) | Migración a `behuman-org/human-zk` (Real-World ZK) |
+| Doc | Purpose |
+|-----|---------|
+| [`hackathon-real-world-zk.md`](./hackathon-real-world-zk.md) | Checklist and pitch for **Stellar Hacks: Real-World ZK** |
+| [`migracion-repo-zk.md`](./migracion-repo-zk.md) | Migration to `behuman-org/human-zk` (Real-World ZK) |

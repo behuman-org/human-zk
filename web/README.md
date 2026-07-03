@@ -1,75 +1,75 @@
 # web · Frontend (React + Vite + TypeScript)
 
-La app de beHuman: **landing** (onboarding del producto) + **flujos en vivo** de Capas 1–3.
+The beHuman app: **landing** (product onboarding) + **live flows** for Layers 1–3.
 
-Entrega hackathon: **[Stellar Hacks: Real-World ZK](https://dorahacks.io/hackathon/stellar-hacks-zk/detail)**.
+Hackathon delivery: **[Stellar Hacks: Real-World ZK](https://dorahacks.io/hackathon/stellar-hacks-zk/detail)**.
 
-> 📐 Diseño landing: inspiración [zk.me](https://www.zk.me/) — ver **`web/docs/DESIGN.md`**
-> 📐 Flujo KYC en vault: `Flujo de KYC` · `Spec — Matcher DNI + Selfie (Capa 1)`
+> 📐 Landing design: inspired by [zk.me](https://www.zk.me/) — see **`web/docs/DESIGN.md`**
+> 📐 KYC flow in vault: `Flujo de KYC` · `Spec — Matcher DNI + Selfie (Capa 1)`
 
-## Documentación
+## Documentation
 
-Toda la documentación del frontend vive en **`web/docs/`**:
+All frontend documentation lives in **`web/docs/`**:
 
-- [Índice](./docs/README.md)
+- [Index](./docs/README.md)
 - [Design system](./docs/DESIGN.md)
-- [Copy / contenido](./docs/COPY.md)
-- [Componentes](./docs/COMPONENTS.md)
-- [Implementación](./docs/IMPLEMENTATION.md)
+- [Copy / content](./docs/COPY.md)
+- [Components](./docs/COMPONENTS.md)
+- [Implementation](./docs/IMPLEMENTATION.md)
 
-## Desarrollo
+## Development
 
 ```bash
-npm install                         # desde la raíz del monorepo
-npm run serve -w @behuman/issuer    # backend matcher en :8787 (necesita modelos)
-npm run dev -w @behuman/web         # frontend en :5173
+npm install                         # from monorepo root
+npm run serve -w @behuman/issuer    # matcher backend on :8787 (needs models)
+npm run dev -w @behuman/web         # frontend on :5173
 ```
 
-Abre http://localhost:5173. La cámara requiere contexto seguro (localhost o https).
+Open http://localhost:5173. Camera requires secure context (localhost or https).
 
-**Env vars:** en dev, defaults localhost (`requireEnv`). En **producción** fallan si faltan:
-`VITE_MATCHER_URL`, `VITE_PLATFORM_API_URL`, `VITE_FUNDING_API_URL`, más contratos/RPC.
-Red de wallet: `VITE_STELLAR_NETWORK_PASSPHRASE`.
+**Env vars:** in dev, localhost defaults (`requireEnv`). In **production** fail if missing:
+`VITE_MATCHER_URL`, `VITE_PLATFORM_API_URL`, `VITE_FUNDING_API_URL`, plus contracts/RPC.
+Wallet network: `VITE_STELLAR_NETWORK_PASSPHRASE`.
 
-## Estructura
+## Structure
 
 ```text
 web/
-├── docs/                 # documentación (design, componentes, changelog)
+├── docs/                 # documentation (design, components, changelog)
 ├── vercel.json           # CSP, X-Frame-Options, etc.
 ├── index.html
 ├── vite.config.ts
 └── src/
-    ├── i18n/               # copy centralizado (locales es/en)
+    ├── i18n/               # centralized copy (es/en locales)
     ├── components/
     ├── hooks/
-    ├── kyc/              # gate Capa 1 (consent → DNI → cara → ZK → on-chain)
-    ├── feed/             # app social Capa 2 (AppGuard, auth Bearer)
-    ├── funding/          # UI Capa 3 (dev)
-    ├── lib/secureStorage.ts  # AES-GCM para secretos en localStorage
+    ├── kyc/              # Layer 1 gate (consent → ID → face → ZK → on-chain)
+    ├── feed/             # Layer 2 social app (AppGuard, Bearer auth)
+    ├── funding/          # Layer 3 UI (dev)
+    ├── lib/secureStorage.ts  # AES-GCM for secrets in localStorage
     ├── styles/
     └── ...
 ```
 
 ## Scripts
 
-| Comando | Descripción |
+| Command | Description |
 |---------|-------------|
 | `npm run dev` | Vite dev server |
 | `npm run build` | copy circuit + typecheck + bundle |
 | `npm run test` | Vitest |
 | `npm run lint` | ESLint |
 
-## Privacidad (honesto)
+## Privacy (honest)
 
-La PII (DNI, selfies, datos declarados) **viaja al matcher mock** por HTTPS para el gate
-biométrico; se procesa en memoria y **no se persiste** en el issuer. On-chain solo van
-commitment, nullifier, proof. El `secret` ZK y la credencial se guardan en el device con
-**cifrado AES-GCM** (`secureStorage.ts`). Pollar crea wallet custodial por email; el modo
-Pollar ahora hace **registro on-chain real** (`verify_and_register`) antes de marcar verified.
+PII (ID, selfies, declared data) **travels to mock matcher** over HTTPS for the biometric
+gate; processed in memory and **not persisted** in the issuer. On-chain only
+commitment, nullifier, proof. ZK `secret` and credential stored on device with
+**AES-GCM encryption** (`secureStorage.ts`). Pollar creates custodial wallet via email; Pollar mode
+now performs **real on-chain registration** (`verify_and_register`) before marking verified.
 
-## Acceso a la app
+## App access
 
-Rutas `/app/*` protegidas por `AppGuard`: sesión + credencial local + `is_verified` on-chain.
+`/app/*` routes protected by `AppGuard`: session + local credential + on-chain `is_verified`.
 
-Ver checklist histórico en [docs/IMPLEMENTATION.md](./docs/IMPLEMENTATION.md).
+See historical checklist in [docs/IMPLEMENTATION.md](./docs/IMPLEMENTATION.md).

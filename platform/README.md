@@ -1,38 +1,38 @@
-# platform · CAPA 2 — Plataforma de opinión verificada
+# platform · LAYER 2 — Verified opinion platform
 
-La **aplicación** sobre el núcleo de identidad: una plaza pública donde **humanos únicos**
-opinan en hilos y publican artículos/estudios — sin exponer su PII, con curaduría que mantiene
-la veracidad sin censurar.
+The **application** on top of the identity core: a public square where **unique humans**
+opine in threads and publish articles/studies — without exposing PII, with curation that maintains
+truthfulness without censorship.
 
-> 🌉 **Puente con Capa 1:** la wallet debe tener `is_verified(address)` on-chain (registro KYC).
-> **Identidad de plataforma:** cada acción usa **`platformId`** (seudónimo estable derivado del
-> secret ZK), verificado con prueba Groth16 (`post.circom`) — **no** la address de wallet.
+> 🌉 **Bridge to Layer 1:** wallet must have `is_verified(address)` on-chain (KYC registration).
+> **Platform identity:** each action uses **`platformId`** (stable pseudonym derived from
+> ZK secret), verified with Groth16 proof (`post.circom`) — **not** wallet address.
 >
-> 📐 Diseño en la vault: `Plataforma de Opinión Verificada`, `Curaduría y Agentes
+> 📐 Design in the vault: `Plataforma de Opinión Verificada`, `Curaduría y Agentes
 > Validadores`, `Identidad Pública vs Anónima`.
 
-| Carpeta | Qué es |
+| Folder | What it is |
 |---|---|
-| [`contracts/`](./contracts/) | `opinion_board` — `register_identity` + `post` con proof ZK. |
-| [`api/`](./api/) | Backend autenticado (Bearer): feed, posts, artículos, curaduría. |
-| [`curation/`](./curation/) | Agente Claude + cola de moderación humana. |
+| [`contracts/`](./contracts/) | `opinion_board` — `register_identity` + `post` with ZK proof. |
+| [`api/`](./api/) | Authenticated backend (Bearer): feed, posts, articles, curation. |
+| [`curation/`](./curation/) | Claude agent + human moderation queue. |
 
-## Modelo de identidad en la plataforma
+## Platform identity model
 
-**Seudónimo estable ZK:** `platformId = Poseidon(secret, scope)` (circuito `post.circom`).
-El usuario se registra on-chain con `register_identity(proof, public_inputs)` y publica con
-`post(proof, public_inputs)`. Los posts son **linkeables bajo el mismo `platformId`** pero la
-PII real y la wallet Stellar quedan desacopladas.
+**Stable ZK pseudonym:** `platformId = Poseidon(secret, scope)` (`post.circom` circuit).
+User registers on-chain with `register_identity(proof, public_inputs)` and publishes with
+`post(proof, public_inputs)`. Posts are **linkable under the same `platformId`** but real
+PII and Stellar wallet remain decoupled.
 
-## Almacenamiento (híbrido)
+## Storage (hybrid)
 
-- **On-chain (`opinion_board`):** prueba de *"publicado por `platformId` verificado, hash = X"*.
-- **Off-chain (`api`):** contenido pesado (texto, PDFs). MVP: store local/Upstash; futuro: IPFS.
+- **On-chain (`opinion_board`):** proof of *"published by verified `platformId`, hash = X"*.
+- **Off-chain (`api`):** heavy content (text, PDFs). MVP: local/Upstash store; future: IPFS.
 
-## Autenticación API
+## API authentication
 
-1. Cliente genera prueba de membresía (`post.circom`) → `POST /auth` con `{ membershipProof }`.
-2. API verifica la prueba y devuelve token **Bearer HMAC** (`SESSION_SECRET`).
-3. POST mutantes (`/content`, `/profile`, `/articles`, replies, opinions) exigen
-   `Authorization: Bearer`; el `platformId` sale del token (se ignora el del body).
-4. El server recomputa `contentHash` y rechaza mismatch. `/moderation/*` usa `MODERATION_SECRET`.
+1. Client generates membership proof (`post.circom`) → `POST /auth` with `{ membershipProof }`.
+2. API verifies proof and returns **Bearer HMAC** token (`SESSION_SECRET`).
+3. Mutating POSTs (`/content`, `/profile`, `/articles`, replies, opinions) require
+   `Authorization: Bearer`; `platformId` comes from token (body value ignored).
+4. Server recomputes `contentHash` and rejects mismatch. `/moderation/*` uses `MODERATION_SECRET`.

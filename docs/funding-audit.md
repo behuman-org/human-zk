@@ -1,41 +1,41 @@
-# CAPA 3 — Auditoría de seguridad (Red Team / Blue Team)
+# LAYER 3 — Security audit (Red Team / Blue Team)
 
-Ejercicio adversarial sobre la integración **Funding ZK** (rama `ground-funding`). El Red
-Team intentó violar las invariantes; el Blue Team corrigió cada hallazgo. Verificación
-independiente: `cargo test` (14), 3 builds TS limpios, y e2e de los exploits (ahora fallan).
+Adversarial exercise on the **ZK Funding** integration (`ground-funding` branch). Red
+Team attempted to violate invariants; Blue Team fixed each finding. Independent verification:
+`cargo test` (14), 3 clean TS builds, and e2e exploit tests (now fail as expected).
 
-Invariantes: **I1** Anonimato/cero PII · **I2** Anti-Sybil · **I3** No-custodia ·
-**I4** Binding de opinión · **I5** Gate por pertenencia.
+Invariants: **I1** Anonymity/zero PII · **I2** Anti-Sybil · **I3** Non-custody ·
+**I4** Opinion binding · **I5** Membership gate.
 
-| ID | Sev | Invariante | Hallazgo | Fix |
+| ID | Sev | Invariant | Finding | Fix |
 |----|-----|-----------|----------|-----|
-| RT-01 | Crítica | I3 | La API validaba el "2-de-3" comparando **direcciones públicas** (en `GET /campaigns`) como si fueran credencial → cualquiera disparaba `release`/`approve`/`refund`. | Auth criptográfica: cada firmante firma un **challenge determinístico** (Ed25519 Stellar); la API verifica la firma (`packages/sdk/fundingAuth.ts`). Firmantes = keypairs reales. Autoridad última = contrato on-chain. |
-| RT-02 | Crítica | I2,I4 | El fallback dev tomaba `platformId`/`nullifier` del **body sin prueba** → Sybil ilimitado del sentimiento. | Eliminado el fallback. En todo modo se exige `opinionProof` válida; identidad/nullifier salen solo de `bindFundingOpinion` + verificación. |
-| RT-03 | Alta | I3 | `init` del contrato sin `require_auth` → front-run de configuración. | `init(admin, …)` con `admin.require_auth()` y admin ∈ signers. |
-| RT-04 | Alta | I3 | `donate`/`release` sin chequeo de deadline → refunds atrapados / liberación tardía. | Contrato y API: `donate` rechaza tras deadline; éxito = meta **antes** del deadline; `release` exige `timestamp <= deadline`. |
-| RT-05 | Alta | I1,I5 | Membership no atada a la wallet; `/position` filtraba montos por wallet sin auth. | `verifyMembership` cripto en todo modo; wallet efímera **por donación**; `/position` exige firma de titularidad. Binding membership↔wallet a nivel circuito: documentado como limitación (no se toca el circuito de plataforma trusteado). |
-| RT-06 | Media | I2,I3 | TOCTOU en el store JSON → doble nullifier / lost update. | `withStore()` serializa mutaciones; `claimNullifier()` atómico insert-if-absent. |
-| RT-07 | Media | — | Handlers async sin try/catch → crash/DoS en modo real. | `wrap()` + middleware de error; fallos de providers → **502** controlado. |
-| RT-08 | Media | I2 | Fail-open de curaduría ocultaba y descontaba votos (censura/integridad). | Conteo anti-Sybil persiste **independiente** del curador; la moderación solo afecta visibilidad. |
-| RT-09 | Media | I3 | Refund devolvía principal+yield y **borraba** donaciones (doble refund / inauditable). | Devuelve **exactamente el principal**; marca `refunded` idempotente; sin atajo `disputed`. |
-| RT-10 | Baja | I4 | `contentHashSq` era restricción muerta (binding real lo daba el input público). | Eliminada del circuito (recompilado); documentado que el binding lo da el status de input público. |
-| RT-11 | Baja | I1 | `strToField` sin separación de dominio en `contentHash`. | Prefijo `"funding-content:"` (SDK + web, espejo); masking de 2 bits documentado como intencional. |
+| RT-01 | Critical | I3 | API validated "2-of-3" by comparing **public addresses** (in `GET /campaigns`) as if they were credentials → anyone could trigger `release`/`approve`/`refund`. | Cryptographic auth: each signer signs a **deterministic challenge** (Ed25519 Stellar); API verifies signature (`packages/sdk/fundingAuth.ts`). Signers = real keypairs. Ultimate authority = on-chain contract. |
+| RT-02 | Critical | I2,I4 | Dev fallback took `platformId`/`nullifier` from **body without proof** → unlimited sentiment Sybil. | Fallback removed. All modes require valid `opinionProof`; identity/nullifier come only from `bindFundingOpinion` + verification. |
+| RT-03 | High | I3 | Contract `init` without `require_auth` → config front-run. | `init(admin, …)` with `admin.require_auth()` and admin ∈ signers. |
+| RT-04 | High | I3 | `donate`/`release` without deadline check → trapped refunds / late release. | Contract and API: `donate` rejects after deadline; success = goal **before** deadline; `release` requires `timestamp <= deadline`. |
+| RT-05 | High | I1,I5 | Membership not bound to wallet; `/position` filtered amounts by wallet without auth. | `verifyMembership` crypto in all modes; ephemeral wallet **per donation**; `/position` requires ownership signature. Membership↔wallet binding at circuit level: documented as limitation (trusted platform circuit not modified). |
+| RT-06 | Medium | I2,I3 | TOCTOU in JSON store → double nullifier / lost update. | `withStore()` serializes mutations; `claimNullifier()` atomic insert-if-absent. |
+| RT-07 | Medium | — | Async handlers without try/catch → crash/DoS in real mode. | `wrap()` + error middleware; provider failures → controlled **502**. |
+| RT-08 | Medium | I2 | Curation fail-open hid and discounted votes (censorship/integrity). | Anti-Sybil count persists **independently** of curator; moderation only affects visibility. |
+| RT-09 | Medium | I3 | Refund returned principal+yield and **deleted** donations (double refund / inauditable). | Returns **exactly principal**; idempotent `refunded` mark; no `disputed` shortcut. |
+| RT-10 | Low | I4 | `contentHashSq` was dead constraint (real binding from public input). | Removed from circuit (recompiled); documented that binding comes from public input status. |
+| RT-11 | Low | I1 | `strToField` without domain separation in `contentHash`. | `"funding-content:"` prefix (SDK + web, mirror); 2-bit masking documented as intentional. |
 
-## Nota positiva
-El contrato `campaign_controller` ya era sólido: `verify_signers` exige `require_auth` por
-firmante, rechaza no-firmantes/duplicados, y `refund` es reentrancy-safe (zera la
-contribución antes del transfer). El problema grave (RT-01) era que **la API no usaba el
-contrato** y reimplementaba las reglas con strings.
+## Positive note
+The `campaign_controller` contract was already solid: `verify_signers` requires `require_auth` per
+signer, rejects non-signers/duplicates, and `refund` is reentrancy-safe (zeros contribution before
+transfer). The serious problem (RT-01) was that **the API did not use the contract** and
+reimplemented rules with strings.
 
-## Limitación conocida (mitigada)
-La prueba de personhood de la **donación** no se ata a la `donorWallet` a nivel circuito
-(requeriría modificar el circuito de plataforma trusteado, fuera de alcance). Mitigado con:
-verificación criptográfica de la membership, wallet efímera por donación y `/position`
-autenticada. Pendiente para cuando se haga la integración on-chain (Manager del vault).
+## Known limitation (mitigated)
+The donation **personhood proof** is not bound to `donorWallet` at circuit level
+(would require modifying the trusted platform circuit, out of scope). Mitigated with:
+cryptographic membership verification, ephemeral wallet per donation, and authenticated `/position`.
+Pending for on-chain integration (vault Manager).
 
-## Verificación de remediación
+## Remediation verification
 - `cargo test -p campaign_controller`: **14 passed**. `stellar contract build`: OK.
-- Builds `@behuman/sdk`, `@behuman/funding-api`, `@behuman/web`: limpios.
-- e2e de exploits (instancia aparte): approve/release sin firma → **403**; opinión sin
-  prueba → **403**; prueba reusada con otro contenido → **403**; donar sin membership →
-  **403**; caminos válidos → **200**.
+- Builds `@behuman/sdk`, `@behuman/funding-api`, `@behuman/web`: clean.
+- Exploit e2e (separate instance): approve/release without signature → **403**; opinion without
+  proof → **403**; proof reused with different content → **403**; donate without membership →
+  **403**; valid paths → **200**.

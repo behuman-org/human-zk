@@ -6,32 +6,32 @@ product
 
 ## Users
 
-Personas reales que quieren participar en conversación pública verificada: publicar opiniones, artículos y causas sin exponer PII, con la garantía de ser humanos únicos (proof of personhood vía KYC-ZK). Contexto de uso: alternan entre descubrir el proyecto (landing) y operar en la plataforma social (`/app/*`) — feed, perfiles, mensajes, artículos, causas, settings. El trabajo principal ocurre en la app; la landing convierte y explica el protocolo.
+Real people who want to participate in verified public conversation: publish opinions, articles, and causes without exposing PII, with the guarantee of being unique humans (proof of personhood via KYC-ZK). Usage context: they alternate between discovering the project (landing) and operating on the social platform (`/app/*`) — feed, profiles, messages, articles, causes, settings. Primary work happens in the app; the landing converts and explains the protocol.
 
 ## Product Purpose
 
-beHuman demuestra que una persona es real y única sin revelar identidad (CAPA 1 · KYC-ZK on Stellar) y habilita una plataforma de opinión donde solo humanos verificados publican con seudónimo estable (CAPA 2). Éxito = flujos claros de verificación → participación → confianza en el badge humano, sin sensación de crypto-bro ni clon de red social tóxica.
+beHuman demonstrates that a person is real and unique without revealing identity (LAYER 1 · KYC-ZK on Stellar) and enables an opinion platform where only verified humans publish with a stable pseudonym (LAYER 2). Success = clear flows from verification → participation → trust in the human badge, without crypto-bro vibes or a toxic social-network clone.
 
 ## Brand Personality
 
-Humano · Cálido · Transparente. Voz directa, empática, sin hype. La prueba de persona y la privacidad se explican con claridad, no con jerga inflada. El diseño transmite cercanía y credibilidad técnica a la vez.
+Human · Warm · Transparent. Direct, empathetic voice without hype. Proof of personhood and privacy are explained clearly, not with inflated jargon. Design conveys warmth and technical credibility at once.
 
 ## Anti-references
 
-- **Crypto-bro:** neón excesivo, FOMO, métricas infladas, dark + gold, “moon” energy.
-- **Clon de Twitter/X:** feed infinito caótico, engagement bait, ruido algorítmico, UI agresiva.
-- **Inventar identidad visual desde cero** cuando ya hay tokens, componentes y patrones en el repo — siempre extender lo existente.
+- **Crypto-bro:** excessive neon, FOMO, inflated metrics, dark + gold, “moon” energy.
+- **Twitter/X clone:** chaotic infinite feed, engagement bait, algorithmic noise, aggressive UI.
+- **Inventing visual identity from scratch** when tokens, components, and patterns already exist in the repo — always extend what exists.
 
 ## Design Principles
 
-1. **Extender, no reinventar** — anclar en `tokens.css`, `behuman-ui.css`, `social-ui.css` y componentes ya construidos; las variantes deben sentirse nativas del sistema actual (tema claro, acento celeste, Plus Jakarta Sans).
-2. **Humano antes que protocolo** — copy y UI priorizan la persona verificada y su voz; la cripto/ZK aparece cuando aporta confianza, no como decoración.
-3. **Landing y app con el mismo rigor** — mismos tokens, motion con propósito y accesibilidad en `/` y en `/app/*`; no tratar la landing como “marketing genérico” ni la app como “afterthought”.
-4. **Transparencia honesta** — declarar issuer mock, matcher que recibe PII por HTTPS (sin
-   persistir), funding dev-only y límites actuales; nunca simular métricas o verificación
-   regulada que no existe.
-5. **Social calmado** — feed legible, jerarquía clara, acciones deliberadas; evitar densidad que compita con la atención del usuario.
+1. **Extend, don't reinvent** — anchor in `tokens.css`, `behuman-ui.css`, `social-ui.css`, and existing components; variants should feel native to the current system (light theme, sky accent, Plus Jakarta Sans).
+2. **Human before protocol** — copy and UI prioritize the verified person and their voice; crypto/ZK appears when it adds trust, not as decoration.
+3. **Landing and app with equal rigor** — same tokens, purposeful motion, and accessibility on `/` and `/app/*`; don't treat the landing as generic marketing or the app as an afterthought.
+4. **Honest transparency** — declare mock issuer, matcher receiving PII over HTTPS (without
+   persisting), dev-only funding, and current limits; never simulate metrics or regulated
+   verification that does not exist.
+5. **Calm social** — readable feed, clear hierarchy, deliberate actions; avoid density that competes for user attention.
 
 ## Accessibility & Inclusion
 
-Aspirar a WCAG 2.1 AAA donde sea razonable; mínimo AA en todo texto y control interactivo. `prefers-reduced-motion` ya desactiva trail/parallax — mantener y extender a nuevas animaciones. Foco visible estricto (`:focus-visible`), contraste generoso en texto muted, touch targets ≥44px en móvil, soporte i18n (es/en) coherente en labels y estados de error.
+Aim for WCAG 2.1 AAA where reasonable; minimum AA on all text and interactive controls. `prefers-reduced-motion` already disables trail/parallax — maintain and extend to new animations. Strict visible focus (`:focus-visible`), generous contrast on muted text, touch targets ≥44px on mobile, consistent i18n (es/en) on labels and error states.

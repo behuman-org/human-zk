@@ -1,5 +1,5 @@
-// Subida de la foto del DNI (frente, con la cara visible).
-// Valida en el backend que SEA un documento de identidad antes de habilitar el escaneo.
+// ID photo upload (front, face visible).
+// Backend validates it IS an identity document before enabling the face scan.
 import { useState } from "react";
 import { Button } from "../components/ui/Button";
 import { checkDocument } from "./api";
@@ -12,8 +12,8 @@ type Status =
   | { kind: "error"; message: string };
 
 const REASON_TEXT: Record<string, string> = {
-  not_an_id_document: "La imagen no parece un documento de identidad (DNI).",
-  no_face_in_document: "No se detecta una cara en el documento.",
+  not_an_id_document: "The image does not look like an identity document.",
+  no_face_in_document: "No face detected on the document.",
 };
 
 export function DocumentUpload({
@@ -44,31 +44,31 @@ export function DocumentUpload({
 
   return (
     <section className="bh-card">
-      <p className="bh-eyebrow">Paso 1 de 3</p>
-      <h2 className="bh-h2">Foto del DNI</h2>
+      <p className="bh-eyebrow">Step 1 of 3</p>
+      <h2 className="bh-h2">ID photo</h2>
       <p className="bh-sub">
-        Subí una foto del <strong>frente de tu documento</strong> donde se vea tu cara.
+        Upload a photo of the <strong>front of your document</strong> with your face visible.
       </p>
 
       <div className="bh-banner bh-banner--info">
-        <strong>Para que se lea bien:</strong>
+        <strong>For a readable capture:</strong>
         <ul className="bh-list">
-          <li>📐 Colocá el DNI en <strong>horizontal</strong> (apaisado), derecho y sin inclinar.</li>
-          <li>🎯 Que entre <strong>completo y centrado</strong> en la foto, bien cerca.</li>
-          <li>🔆 Buena luz y <strong>sin reflejos ni sombras</strong>: el texto tiene que verse <strong>nítido y legible</strong>.</li>
+          <li>📐 Place the ID <strong>horizontally</strong>, straight and level.</li>
+          <li>🎯 Fit the document <strong>fully and centered</strong>, close to the camera.</li>
+          <li>🔆 Good light, <strong>no glare or shadows</strong> — text must be <strong>sharp and legible</strong>.</li>
         </ul>
       </div>
 
       {notice && <div className="bh-banner bh-banner--warn">⚠️ {notice}</div>}
 
       <input className="bh-input" type="file" accept="image/*" onChange={onPick} />
-      {preview && <img src={preview} alt="DNI" className="bh-preview" />}
+      {preview && <img src={preview} alt="ID document" className="bh-preview" />}
 
-      {status.kind === "checking" && <p className="bh-note">Verificando que sea un documento…</p>}
-      {status.kind === "ok" && <p className="bh-note bh-note--ok">✅ Documento válido.</p>}
+      {status.kind === "checking" && <p className="bh-note">Checking document…</p>}
+      {status.kind === "ok" && <p className="bh-note bh-note--ok">✅ Valid document.</p>}
       {status.kind === "invalid" && (
         <div className="bh-note bh-note--err">
-          <p>❌ No es un documento de identidad válido. Subí una foto del DNI.</p>
+          <p>❌ Not a valid identity document. Upload an ID photo.</p>
           <ul className="bh-list">
             {status.reasons.map((r) => (
               <li key={r}>{REASON_TEXT[r] ?? r}</li>
@@ -80,7 +80,7 @@ export function DocumentUpload({
 
       <div className="bh-actions">
         <Button disabled={!doc || status.kind !== "ok"} onClick={() => doc && onNext(doc)}>
-          Continuar a tus datos
+          Continue to your details
         </Button>
       </div>
     </section>

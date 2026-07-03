@@ -1,29 +1,28 @@
-// Pantalla de consentimiento informado (Ley 25.326): debe constar ANTES de capturar
-// DNI/biometría. Ver Cumplimiento-Argentina en la vault.
+// Informed consent screen — must appear BEFORE capturing ID/biometry.
 import { Button } from "../components/ui/Button";
 
 export function Consent({ onAccept }: { onAccept: () => void }) {
   return (
     <section className="bh-card">
-      <p className="bh-eyebrow">Privacidad primero</p>
-      <h2 className="bh-h2">Antes de empezar</h2>
+      <p className="bh-eyebrow">Privacy first</p>
+      <h2 className="bh-h2">Before you start</h2>
       <p className="bh-p">
-        Para verificar que sos una persona real y única vamos a pedirte una{" "}
-        <strong>foto de tu DNI</strong> y un <strong>escaneo de tu cara</strong> con la cámara.
+        To verify you are a real, unique person we will ask for a{" "}
+        <strong>photo of your ID</strong> and a <strong>live face scan</strong> with your camera.
       </p>
       <ul className="bh-list">
-        <li>Las imágenes se procesan <strong>en el momento</strong> y no se guardan.</li>
+        <li>Images are processed <strong>in the moment</strong> and are not stored.</li>
         <li>
-          <strong>Nada de tus datos</strong> (cara, documento, nombre) toca la blockchain:
-          on-chain solo va una prueba criptográfica anónima.
+          <strong>None of your data</strong> (face, document, name) goes on-chain — only an
+          anonymous cryptographic proof is registered.
         </li>
-        <li>Podés ejercer tus derechos de acceso y supresión (Ley 25.326).</li>
+        <li>You may exercise access and deletion rights under applicable privacy law.</li>
       </ul>
       <p className="bh-note bh-note--warn">
-        ⚠️ Demo testnet: la verificación biométrica es un matcher de prueba (no RENAPER).
+        ⚠️ Testnet demo: biometric verification uses a test matcher (not regulated KYC).
       </p>
       <div className="bh-actions">
-        <Button onClick={onAccept}>Acepto y continúo</Button>
+        <Button onClick={onAccept}>I agree and continue</Button>
       </div>
     </section>
   );

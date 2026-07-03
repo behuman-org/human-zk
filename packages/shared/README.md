@@ -1,9 +1,9 @@
 # @behuman/shared
 
-Tipos y utilidades compartidas entre `web/`, `platform/api`, `platform/curation` y
-`packages/sdk`. Evita duplicar definiciones de `VerifiedAddress`, `Post`, `CurationVerdict`, etc.
+Shared types and utilities between `web/`, `platform/api`, `platform/curation`, and
+`packages/sdk`. Avoids duplicating definitions of `VerifiedAddress`, `Post`, `CurationVerdict`, etc.
 
-> La fuente de verdad del diseño sigue siendo la vault de Obsidian (`Modelo de Datos`,
+> Design source of truth remains the Obsidian vault (`Modelo de Datos`,
 > `Plataforma de Opinión Verificada`).
 
 ```bash

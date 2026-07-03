@@ -1,26 +1,26 @@
-# Copy de la landing — beHuman
+# Landing copy — beHuman
 
-Texto centralizado en `src/i18n/locales/{es,en}.ts`. Alineado a `README.md`, `CLAUDE.md` y la vault Obsidian (`obsidian-vault-zk`).
+Text centralized in `src/i18n/locales/{es,en}.ts`. Aligned with `README.md`, `CLAUDE.md`, and Obsidian vault (`obsidian-vault-zk`).
 
-## Secciones
+## Sections
 
-| Sección | ID | Contenido |
+| Section | ID | Content |
 |---------|-----|-----------|
-| Hero | — | Qué es beHuman, proof of personhood, stack |
-| Arquitectura | `#capas` | CAPA 1 identidad + CAPA 2 plataforma, puente `is_verified` |
-| Flujo KYC | `#como-funciona` | 4 fases: emisión → prueba → verificación → consumo |
-| Plataforma | `#plataforma` | opinion_board, api, seudónimo, tipos de post |
-| Curaduría | `#curacion` | Agente IA + moderación humana, principio anti-censura |
-| Protocolo | — | Stats de diseño (2 capas, 1 puente, 0 PII on-chain, 4 fases) |
-| Comparativa | `#compare` | 7 filas tradicional vs beHuman |
+| Hero | — | What beHuman is, proof of personhood, stack |
+| Architecture | `#capas` | LAYER 1 identity + LAYER 2 platform, `is_verified` bridge |
+| KYC flow | `#como-funciona` | 4 phases: issuance → proof → verification → consumption |
+| Platform | `#plataforma` | opinion_board, api, pseudonym, post types |
+| Curation | `#curacion` | AI agent + human moderation, anti-censorship principle |
+| Protocol | — | Design stats (2 layers, 1 bridge, 0 PII on-chain, 4 phases) |
+| Compare | `#compare` | 7 rows traditional vs beHuman |
 
-## Disclaimers obligatorios
+## Required disclaimers
 
-- **Issuer mock** — declarado en hero flow paso 01 y footer
-- **Stellar Hacks: Real-World ZK** — enlace en footer y disclaimer de auth (`siteMeta.hackathon`)
+- **Mock issuer** — stated in hero flow step 01 and footer
+- **Stellar Hacks: Real-World ZK** — link in footer and auth disclaimer (`siteMeta.hackathon`)
 
-## Editar copy
+## Edit copy
 
-1. Modificar `src/i18n/locales/es.ts` y `en.ts`
-2. Actualizar este archivo si cambia estructura de secciones
-3. Correr `npm run test --workspace @behuman/web` si cambian textos usados en tests
+1. Modify `src/i18n/locales/es.ts` and `en.ts`
+2. Update this file if section structure changes
+3. Run `npm run test --workspace @behuman/web` if texts used in tests change

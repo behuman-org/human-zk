@@ -1,30 +1,30 @@
-# Documentación del frontend (`web/`)
+# Frontend documentation (`web/`)
 
-Índice de documentación técnica y de diseño para beHuman.
+Index of technical and design documentation for beHuman.
 
-| Documento | Contenido |
+| Document | Content |
 |-----------|-----------|
-| [DESIGN.md](./DESIGN.md) | Referencia visual, tokens, animaciones, accesibilidad |
-| [COPY.md](./COPY.md) | Textos de la landing y mapeo secciones |
-| [COMPONENTS.md](./COMPONENTS.md) | Catálogo de componentes y props |
-| [IMPLEMENTATION.md](./IMPLEMENTATION.md) | Log de implementación por slice |
-| [CHANGELOG.md](./CHANGELOG.md) | Cambios notables del frontend |
+| [DESIGN.md](./DESIGN.md) | Visual reference, tokens, animations, accessibility |
+| [COPY.md](./COPY.md) | Landing copy and section mapping |
+| [COMPONENTS.md](./COMPONENTS.md) | Component catalog and props |
+| [IMPLEMENTATION.md](./IMPLEMENTATION.md) | Implementation log by slice |
+| [CHANGELOG.md](./CHANGELOG.md) | Notable frontend changes |
 
-## Estado actual
+## Current status
 
-Landing + flujo KYC on-chain + app social (`/app/*`) con guard de rutas, auth Bearer a la
-platform API, storage cifrado y UI de funding (dev). Ver [IMPLEMENTATION.md](./IMPLEMENTATION.md).
+Landing + on-chain KYC flow + social app (`/app/*`) with route guard, Bearer auth to
+platform API, encrypted storage, and funding UI (dev). See [IMPLEMENTATION.md](./IMPLEMENTATION.md).
 
-## Comandos
+## Commands
 
 ```bash
 npm run dev --workspace @behuman/web   # http://localhost:5173
 npm run test --workspace @behuman/web
 npm run lint --workspace @behuman/web
-npm run build --workspace @behuman/web  # en prod exige VITE_* URLs
+npm run build --workspace @behuman/web  # in prod requires VITE_* URLs
 ```
 
-## Env obligatorias en producción
+## Required env in production
 
 `VITE_MATCHER_URL`, `VITE_PLATFORM_API_URL`, `VITE_FUNDING_API_URL`,
 `VITE_KYC_VERIFIER_CONTRACT_ID`, `VITE_STELLAR_RPC_URL`, `VITE_STELLAR_NETWORK_PASSPHRASE`.
